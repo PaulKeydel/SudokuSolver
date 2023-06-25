@@ -96,6 +96,12 @@ class SudokuBoard:
                 exist = exist and self.isInBlock(i_, dig) and self.isInCol(i_, dig) and self.isInRow(i_, dig)
         return exist
 
+    def print(self):
+        for row in range(9):
+            print("{}  {}  {}    {}  {}  {}    {}  {}  {}".format(self.at(row, 0),self.at(row, 1),self.at(row, 2),self.at(row, 3),self.at(row, 4),self.at(row, 5),self.at(row, 6),self.at(row, 7),self.at(row, 8)))
+            if (row % 3 == 2):
+                print("")
+
 
 class SudokuSolver(SudokuBoard):
     def __init__(self, board):
@@ -154,22 +160,13 @@ class SudokuSolver(SudokuBoard):
         while not valid:
             for blk in range(9):
                 for idx in range(9):
+                    #apply the strategies
                     self.perform_naked_single(blk, idx)
                     self.perform_hidden_single(blk, idx)
             valid = self.valid()
     
-    def print(self):
-        for row in range(9):
-            print("{}  {}  {}    {}  {}  {}    {}  {}  {}".format(self.at(row, 0),self.at(row, 1),self.at(row, 2),self.at(row, 3),self.at(row, 4),self.at(row, 5),self.at(row, 6),self.at(row, 7),self.at(row, 8)))
-            if (row % 3 == 2):
-                print("")
 
 
 ss = SudokuSolver(aa)
-#ss.perform_naked_single(1, 4)
-#ss.perform_hidden_single(3, 4)
-#ss.perform_hidden_single(7, 6)
-#print(ss.atBlock(3, 4))
-#print(ss.atBlock(7, 6))
 ss.solve()
 ss.print()
