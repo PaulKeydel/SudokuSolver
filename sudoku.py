@@ -40,6 +40,10 @@ class Cell:
     def set(self, dig):
         self.isEmpty = (dig == 0)
         self.val = dig
+    
+    def isPairTo(self, cell):
+        assert(isinstance(cell, Cell))
+        return ((len(set(self.candidates)) == 2) & (set(self.candidates) == set(cell.candidates)))
 
 
 class SudokuBoard:
@@ -99,6 +103,40 @@ class SudokuBoard:
         assert(col >= 0 and col < 3)
         return (self.atBlock(block, col + 0) == digit) or (self.atBlock(block, col + 3) == digit) or (self.atBlock(block, col + 6) == digit)
     
+    def isPresent(self, row, col, digit):
+        block = 3 * (row // 3) + (col // 3)
+        return (self.isInRow(row, digit) or self.isInCol(col, digit) or self.isInBlock(block, digit) or (digit in self.b[9 * row + col].known))
+    
+    def isUniqueGapInBlockRow(self, row, col):
+        block = 3 * (row // 3) + (col // 3)
+        idx = 3 * (row % 3) + (col % 3)
+        c = idx % 3
+        if (c == 0):
+            if ((self.atBlock(block, idx + 1) != 0 and self.atBlock(block, idx + 2) != 0) or (self.b[9 * row + col + 1].isPairTo(self.b[9 * row + col + 2]))):
+                return True
+        if (c == 1):
+            if ((self.atBlock(block, idx - 1) != 0 and self.atBlock(block, idx + 1) != 0) or (self.b[9 * row + col - 1].isPairTo(self.b[9 * row + col + 1]))):
+                return True
+        if (c == 2):
+            if ((self.atBlock(block, idx - 2) != 0 and self.atBlock(block, idx - 1) != 0) or (self.b[9 * row + col - 2].isPairTo(self.b[9 * row + col - 1]))):
+                return True
+        return False
+    
+    def isUniqueGapInBlockCol(self, row, col):
+        block = 3 * (row // 3) + (col // 3)
+        idx = 3 * (row % 3) + (col % 3)
+        r = idx // 3
+        if (r == 0):
+            if ((self.atBlock(block, idx + 3) != 0 and self.atBlock(block, idx + 6) != 0) or (self.b[9 * (row + 1) + col].isPairTo(self.b[9 * (row + 2) + col]))):
+                return True
+        if (r == 1):
+            if ((self.atBlock(block, idx - 3) != 0 and self.atBlock(block, idx + 3) != 0) or (self.b[9 * (row - 1) + col].isPairTo(self.b[9 * (row + 1) + col]))):
+                return True
+        if (r == 2):
+            if ((self.atBlock(block, idx - 6) != 0 and self.atBlock(block, idx - 3) != 0) or (self.b[9 * (row - 2) + col].isPairTo(self.b[9 * (row - 1) + col]))):
+                return True
+        return False
+
     def isComplete(self):
         for i in range(81):
             if self.b[i].val == 0:
@@ -133,7 +171,7 @@ class SudokuSolver(SudokuBoard):
         num_exist_neighbors = 0
         missing_neighbor = 0
         for dig in range(1, 10):
-            if (self.isInRow(row, dig) or self.isInCol(col, dig) or self.isInBlock(block, dig)):
+            if self.isPresent(row, col, dig):
                 num_exist_neighbors = num_exist_neighbors + 1
             else:
                 missing_neighbor = dig
@@ -151,7 +189,7 @@ class SudokuSolver(SudokuBoard):
             if self.isInBlock(block, dig):
                 continue
             #horizontal looking
-            if ((c == 0 and self.atBlock(block, idx + 1) != 0 and self.atBlock(block, idx + 2) != 0) or (c == 1 and self.atBlock(block, idx - 1) != 0 and self.atBlock(block, idx + 1) != 0) or (c == 2 and self.atBlock(block, idx - 2) != 0 and self.atBlock(block, idx - 1) != 0)):
+            if self.isUniqueGapInBlockRow(row, col):
                 if (r == 0 and self.isInRow(row + 1, dig) and self.isInRow(row + 2, dig)):
                     self.b[9 * row + col].set(dig)
                     return
@@ -162,7 +200,7 @@ class SudokuSolver(SudokuBoard):
                     self.b[9 * row + col].set(dig)
                     return
             #vertical looking
-            if ((r == 0 and self.atBlock(block, idx + 3) != 0 and self.atBlock(block, idx + 6) != 0) or (r == 1 and self.atBlock(block, idx - 3) != 0 and self.atBlock(block, idx + 3) != 0) or (r == 2 and self.atBlock(block, idx - 6) != 0 and self.atBlock(block, idx - 3) != 0)):
+            if self.isUniqueGapInBlockCol(row, col):
                 if (c == 0 and self.isInCol(col + 1, dig) and self.isInCol(col + 2, dig)):
                     self.b[9 * row + col].set(dig)
                     return
