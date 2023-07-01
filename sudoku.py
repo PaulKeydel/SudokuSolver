@@ -9,9 +9,9 @@ a = [
     [0, 0, 0,   0, 0, 0,   0, 0, 0],
     [0, 0, 0,   0, 7, 0,   0, 0, 0],
 
-    [0, 0, 0,   0, 0, 0,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   0, 0, 0]
+    [0, 1, 0,   0, 0, 0,   0, 0, 0],
+    [0, 0, 0,   2, 3, 5,   0, 0, 0],
+    [0, 0, 0,   0, 0, 0,   2, 3, 0]
     ]
 aa = [
     [2, 5, 0,   1, 3, 0,   9, 8, 0],
@@ -29,17 +29,25 @@ aa = [
 
 class Cell:
     def __init__(self):
-        self.isEmpty = True
         self.val = 0
         self.candidates = []
         self.known = []
+        self.pairIdx = -1
     
     def isEq(self, dig):
         return (self.val == dig)
     
+    def hasPair(self):
+        return (self.pairIdx != -1)
+    
+    def isGap(self):
+        return (self.val == 0)
+    
     def set(self, dig):
-        self.isEmpty = (dig == 0)
         self.val = dig
+        if (dig > 0):
+            self.candidates = []
+            self.known = []
     
     def isPairTo(self, cell):
         assert(isinstance(cell, Cell))
@@ -51,7 +59,6 @@ class SudokuBoard:
         self.b = [Cell() for _ in range(81)]
         for row in range(9):
             for col in range(9):
-                self.b[9 * row + col].isEmpty = (board[row][col] == 0)
                 self.b[9 * row + col].val = board[row][col]
     
     def at(self, row, col):
@@ -162,6 +169,39 @@ class SudokuBoard:
 class SudokuSolver(SudokuBoard):
     def __init__(self, board):
         super().__init__(board)
+    
+    def updateCands(self):
+        for idx in range(81):
+            if not self.b[idx].isGap():
+                continue
+            for dig in range(1, 10):
+                if not self.isPresent(idx // 9, idx % 9, dig):
+                    self.b[idx].candidates.append(dig)
+        return
+    
+    def searchForCandPairs(self):
+        for row in range(9):
+            for col in range(9):
+                if (self.b[9 * row + col].isGap() and not self.b[9 * row + col].hasPair()):
+                    allOtherCands = set()
+                    #search along row
+                    for c in range(9):
+                        if (c == col or self.b[9 * row + c].hasPair() or not self.b[9 * row + c].isGap()):
+                            continue
+                        #collect all other candidates
+                        for j in range(9):
+                            if (j == col or j == c):
+                                continue
+                            allOtherCands = allOtherCands.union(set(self.b[9 * row + j].candidates))
+                        t = set(self.b[9 * row + col].candidates).intersection(set(self.b[9 * row + c].candidates))
+                        t = t.difference(allOtherCands)
+                        if (len(t) == 2):
+                            self.b[9 * row + col].candidates = list(t)
+                            self.b[9 * row + col].pairIdx = c
+                            self.b[9 * row + c].candidates = list(t)
+                            self.b[9 * row + c].pairIdx = col
+        #tbd: update known
+        return
 
     def perform_naked_single(self, block, idx):
         if self.atBlock(block, idx) != 0:
@@ -186,7 +226,7 @@ class SudokuSolver(SudokuBoard):
         row = 3 * (block // 3) + r
         col = 3 * (block % 3) + c
         for dig in range(1, 10):
-            if self.isInBlock(block, dig):
+            if self.isPresent(row, col, dig):
                 continue
             #horizontal looking
             if self.isUniqueGapInBlockRow(row, col):
@@ -223,6 +263,12 @@ class SudokuSolver(SudokuBoard):
     
 
 
-ss = SudokuSolver(aa)
-ss.solve()
-ss.print()
+ss = SudokuSolver(a)
+ss.updateCands()
+print(ss.b[54+0].candidates)
+ss.searchForCandPairs()
+print(ss.b[54+0].candidates)
+print(ss.b[54+1].candidates)
+print(ss.b[54+2].candidates)
+#ss.solve()
+#ss.print()
