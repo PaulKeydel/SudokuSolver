@@ -1,19 +1,23 @@
 import numpy as np
 
-a = [
-    [0, 0, 0,   1, 0, 2,   0, 0, 0],
-    [0, 8, 0,   0, 0, 0,   4, 5, 0],
-    [0, 0, 0,   0, 0, 9,   0, 0, 0],
+#cell[9 * 1 + 1]: hidden single
+#cell[9 * 4 + 4]: naked single
+#cell[9 * 6 + 8] and cell[9 * 8 + 8]: hidden pair (5, 7)
+#cell[9 * 6 + 8] and cell[9 * 8 + 8]: naked pair (5, 7), check this with cell[9 * 0 + 8]
+testboard1 = [
+    [0, 0, 0,   0, 0, 0,   2, 0, 0],
+    [1, 0, 3,   0, 0, 0,   0, 0, 0],
+    [0, 0, 0,   0, 2, 0,   0, 0, 0],
 
-    [0, 0, 0,   0, 6, 0,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   0, 0, 0],
-    [0, 0, 0,   0, 7, 0,   0, 0, 0],
+    [0, 0, 0,   0, 1, 0,   0, 0, 0],
+    [0, 0, 4,   0, 0, 0,   7, 8, 9],
+    [0, 0, 0,   5, 0, 0,   0, 0, 0],
 
-    [0, 1, 0,   0, 0, 0,   0, 0, 0],
-    [0, 0, 0,   2, 3, 5,   0, 0, 0],
+    [0, 0, 0,   0, 0, 0,   4, 1, 0],
+    [7, 0, 0,   2, 3, 5,   0, 0, 0],
     [0, 0, 0,   0, 0, 0,   2, 3, 0]
     ]
-aa = [
+testboard2 = [
     [2, 5, 0,   1, 3, 0,   9, 8, 0],
     [9, 0, 0,   0, 7, 0,   1, 0, 0],
     [8, 0, 7,   0, 0, 5,   4, 0, 6],
@@ -189,7 +193,7 @@ class SudokuSolver(SudokuBoard):
                         for c in range(9):
                             if ((c == col) or (c == colpair)):
                                 continue
-                            self.b[9 * row + c].candidates.difference(candPair)
+                            self.b[9 * row + c].candidates.difference_update(candPair)
                     #update cand list in same col
                     rowpair = -1
                     for r in range(9):
@@ -201,17 +205,17 @@ class SudokuSolver(SudokuBoard):
                         for r in range(9):
                             if ((r == row) or (r == rowpair)):
                                 continue
-                            self.b[9 * r + col].candidates.difference(candPair)
+                            self.b[9 * r + col].candidates.difference_update(candPair)
         #look for hidden pairs
         for row in range(9):
             for col in range(9):
                 if (self.b[9 * row + col].isGap()):
                     #search along row
-                    allOtherCands = set()
                     for c in range(9):
                         if (c == col or not self.b[9 * row + c].isGap()):
                             continue
                         #collect all other candidates
+                        allOtherCands = set()
                         for j in range(9):
                             if (j == col or j == c):
                                 continue
@@ -222,11 +226,11 @@ class SudokuSolver(SudokuBoard):
                             self.b[9 * row + col].candidates = t
                             self.b[9 * row + c].candidates = t
                     #search along col
-                    allOtherCands = set()
                     for r in range(9):
                         if (r == row or not self.b[9 * r + col].isGap()):
                             continue
                         #collect all other candidates
+                        allOtherCands = set()
                         for i in range(9):
                             if (i == row or i == r):
                                 continue
@@ -236,18 +240,60 @@ class SudokuSolver(SudokuBoard):
                         if (len(t) == 2):
                             self.b[9 * row + col].candidates = t
                             self.b[9 * r + col].candidates = t
+                    #search within block
+                    rowstart = 3 * (row // 3)
+                    colstart = 3 * (col // 3)
+                    for r in range(rowstart, rowstart + 3):
+                        for c in range(colstart, colstart + 3):
+                            if ((r == row and c == col) or not self.b[9 * r + c].isGap()):
+                                continue
+                            #collect all other candidates
+                            allOtherCands = set()
+                            for i in range(rowstart, rowstart + 3):
+                                for j in range(colstart, colstart + 3):
+                                    if ((i == row and j == col) or (i == r and j == c)):
+                                        continue
+                                    allOtherCands = allOtherCands.union(self.b[9 * i + j].candidates)
+                            t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + c].candidates)
+                            t = t.difference(allOtherCands)
+                            if (len(t) == 2):
+                                self.b[9 * row + col].candidates = t
+                                self.b[9 * r + c].candidates = t
         return
     
-    def solve(self):
-        valid = False
-        while not valid:
-            self.searchForCandSingles()
-            self.searchForCandPairs()
-            valid = self.valid()
+    def solve(self, numIterations = 0):
+        if (numIterations == 0):
+            valid = False
+            while not valid:
+                self.searchForCandSingles()
+                self.searchForCandPairs()
+                valid = self.valid()
+        else:
+            for i in range(numIterations):
+                self.searchForCandSingles()
+                self.searchForCandPairs()
     
 
 
-ss = SudokuSolver(aa)
+ss = SudokuSolver(testboard1)
 ss.updateCands()
-ss.solve()
-ss.print()
+
+#cell[9 * 1 + 1]: hidden single
+#cell[9 * 4 + 4]: naked single
+#cell[9 * 6 + 8] and cell[9 * 8 + 8]: hidden pair (5, 7)
+#cell[9 * 6 + 8] and cell[9 * 8 + 8]: naked pair (5, 7), check this with cell[9 * 0 + 8]
+
+ss.solve(numIterations = 2)
+
+print("Digit and Cands of cell(1, 1):")
+print([ss.b[9 * 1 + 1].val, ss.b[9 * 1 + 1].candidates])
+print("Digit and Cands of cell(4, 4):")
+print([ss.b[9 * 4 + 4].val, ss.b[9 * 4 + 4].candidates])
+print("Digit and Cands of cell(6, 8):")
+print([ss.b[9 * 6 + 8].val, ss.b[9 * 6 + 8].candidates])
+print("Digit and Cands of cell(8, 8):")
+print([ss.b[9 * 8 + 8].val, ss.b[9 * 8 + 8].candidates])
+print("Digit and Cands of cell(0, 8):")
+print([ss.b[9 * 0 + 8].val, ss.b[9 * 0 + 8].candidates])
+
+#ss.print()
