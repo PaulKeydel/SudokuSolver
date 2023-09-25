@@ -129,7 +129,7 @@ class SudokuSolver(SudokuBoard):
         return
     
     def searchForCandSingles(self):
-        #look for naked singles
+        #look for naked singles and update cand list
         for row in range(9):
             for col in range(9):
                 if (len(self.b[9 * row + col].candidates) == 1):
@@ -149,8 +149,8 @@ class SudokuSolver(SudokuBoard):
         for row in range(9):
             for col in range(9):
                 if (self.b[9 * row + col].isGap()):
-                    allOtherCands = set()
                     #search along row and collect all other candidates
+                    allOtherCands = set()
                     for c in range(9):
                         if (c == col or not self.b[9 * row + c].isGap()):
                             continue
@@ -160,8 +160,8 @@ class SudokuSolver(SudokuBoard):
                         self.b[9 * row + col].candidates = t
                         dig = self.b[9 * row + col].candidates.pop()
                         self.b[9 * row + col].val = dig
-                    allOtherCands = set()
                     #search along col and collect all other candidates
+                    allOtherCands = set()
                     for r in range(9):
                         if (r == row or not self.b[9 * r + col].isGap()):
                             continue
@@ -173,11 +173,41 @@ class SudokuSolver(SudokuBoard):
                         self.b[9 * row + col].val = dig
     
     def searchForCandPairs(self):
+        #look for naked pairs and update cand list
+        for row in range(9):
+            for col in range(9):
+                if (len(self.b[9 * row + col].candidates) == 2):
+                    candPair = self.b[9 * row + col].candidates
+                    #update cand list in same row
+                    colpair = -1
+                    for c in range(9):
+                        if (c == col):
+                            continue
+                        if (self.b[9 * row + c].candidates == candPair):
+                            colpair = c
+                    if (colpair >= 0):
+                        for c in range(9):
+                            if ((c == col) or (c == colpair)):
+                                continue
+                            self.b[9 * row + c].candidates.difference(candPair)
+                    #update cand list in same col
+                    rowpair = -1
+                    for r in range(9):
+                        if (r == row):
+                            continue
+                        if (self.b[9 * r + col].candidates == candPair):
+                            rowpair = r
+                    if (rowpair >= 0):
+                        for r in range(9):
+                            if ((r == row) or (r == rowpair)):
+                                continue
+                            self.b[9 * r + col].candidates.difference(candPair)
+        #look for hidden pairs
         for row in range(9):
             for col in range(9):
                 if (self.b[9 * row + col].isGap()):
-                    allOtherCands = set()
                     #search along row
+                    allOtherCands = set()
                     for c in range(9):
                         if (c == col or not self.b[9 * row + c].isGap()):
                             continue
@@ -191,7 +221,21 @@ class SudokuSolver(SudokuBoard):
                         if (len(t) == 2):
                             self.b[9 * row + col].candidates = t
                             self.b[9 * row + c].candidates = t
-        #tbd: update known
+                    #search along col
+                    allOtherCands = set()
+                    for r in range(9):
+                        if (r == row or not self.b[9 * r + col].isGap()):
+                            continue
+                        #collect all other candidates
+                        for i in range(9):
+                            if (i == row or i == r):
+                                continue
+                            allOtherCands = allOtherCands.union(self.b[9 * i + col].candidates)
+                        t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + col].candidates)
+                        t = t.difference(allOtherCands)
+                        if (len(t) == 2):
+                            self.b[9 * row + col].candidates = t
+                            self.b[9 * r + col].candidates = t
         return
     
     def solve(self):
