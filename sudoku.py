@@ -136,129 +136,173 @@ class SudokuSolver(SudokuBoard):
         #look for naked singles and update cand list
         for row in range(9):
             for col in range(9):
-                if (len(self.b[9 * row + col].candidates) == 1):
-                    dig = self.b[9 * row + col].candidates.pop()
-                    self.b[9 * row + col].val = dig
-                    #update cand list in same row
-                    for c in range(9):
-                        if (c == col):
+                if (len(self.b[9 * row + col].candidates) != 1):
+                    continue
+                dig = self.b[9 * row + col].candidates.pop()
+                self.b[9 * row + col].val = dig
+                #update cand list in same row
+                for c in range(9):
+                    if (c == col):
+                        continue
+                    self.b[9 * row + c].candidates.discard(dig)
+                #update cand list in same col
+                for r in range(9):
+                    if (r == row):
+                        continue
+                    self.b[9 * r + col].candidates.discard(dig)
+                #update cand list in same block
+                rowstart = 3 * (row // 3)
+                colstart = 3 * (col // 3)
+                for r in range(rowstart, rowstart + 3):
+                    for c in range(colstart, colstart + 3):
+                        if (r == row and c == col):
                             continue
-                        self.b[9 * row + c].candidates.discard(dig)
-                    #update cand list in same col
-                    for r in range(9):
-                        if (r == row):
-                            continue
-                        self.b[9 * r + col].candidates.discard(dig)
+                        self.b[9 * r + c].candidates.discard(dig)
         #look for hidden singles
         for row in range(9):
             for col in range(9):
-                if (self.b[9 * row + col].isGap()):
-                    #search along row and collect all other candidates
-                    allOtherCands = set()
-                    for c in range(9):
-                        if (c == col or not self.b[9 * row + c].isGap()):
+                if (not self.b[9 * row + col].isGap()):
+                    continue
+                #search along row and collect all other candidates
+                allOtherCands = set()
+                for c in range(9):
+                    if (c == col or not self.b[9 * row + c].isGap()):
+                        continue
+                    allOtherCands = allOtherCands.union(self.b[9 * row + c].candidates)
+                t = self.b[9 * row + col].candidates.difference(allOtherCands)
+                if (len(t) == 1):
+                    self.b[9 * row + col].candidates = t
+                    dig = self.b[9 * row + col].candidates.pop()
+                    self.b[9 * row + col].val = dig
+                #search along col and collect all other candidates
+                allOtherCands = set()
+                for r in range(9):
+                    if (r == row or not self.b[9 * r + col].isGap()):
+                        continue
+                    allOtherCands = allOtherCands.union(self.b[9 * r + col].candidates)
+                t = self.b[9 * row + col].candidates.difference(allOtherCands)
+                if (len(t) == 1):
+                    self.b[9 * row + col].candidates = t
+                    dig = self.b[9 * row + col].candidates.pop()
+                    self.b[9 * row + col].val = dig
+                #search within block and collect all other candidates
+                allOtherCands = set()
+                rowstart = 3 * (row // 3)
+                colstart = 3 * (col // 3)
+                for r in range(rowstart, rowstart + 3):
+                    for c in range(colstart, colstart + 3):
+                        if ((r == row and c == col) or not self.b[9 * r + c].isGap()):
                             continue
-                        allOtherCands = allOtherCands.union(self.b[9 * row + c].candidates)
-                    t = self.b[9 * row + col].candidates.difference(allOtherCands)
-                    if (len(t) == 1):
-                        self.b[9 * row + col].candidates = t
-                        dig = self.b[9 * row + col].candidates.pop()
-                        self.b[9 * row + col].val = dig
-                    #search along col and collect all other candidates
-                    allOtherCands = set()
-                    for r in range(9):
-                        if (r == row or not self.b[9 * r + col].isGap()):
-                            continue
-                        allOtherCands = allOtherCands.union(self.b[9 * r + col].candidates)
-                    t = self.b[9 * row + col].candidates.difference(allOtherCands)
-                    if (len(t) == 1):
-                        self.b[9 * row + col].candidates = t
-                        dig = self.b[9 * row + col].candidates.pop()
-                        self.b[9 * row + col].val = dig
+                        allOtherCands = allOtherCands.union(self.b[9 * r + c].candidates)
+                t = self.b[9 * row + col].candidates.difference(allOtherCands)
+                if (len(t) == 1):
+                    self.b[9 * row + col].candidates = t
+                    dig = self.b[9 * row + col].candidates.pop()
+                    self.b[9 * row + col].val = dig
     
     def searchForCandPairs(self):
         #look for naked pairs and update cand list
         for row in range(9):
             for col in range(9):
-                if (len(self.b[9 * row + col].candidates) == 2):
-                    candPair = self.b[9 * row + col].candidates
-                    #update cand list in same row
-                    colpair = -1
+                if (len(self.b[9 * row + col].candidates) != 2):
+                    continue
+                candPair = self.b[9 * row + col].candidates
+                #update cand list in same row
+                colpair = -1
+                for c in range(9):
+                    if (c == col):
+                        continue
+                    if (self.b[9 * row + c].candidates == candPair):
+                        colpair = c
+                if (colpair >= 0):
                     for c in range(9):
-                        if (c == col):
+                        if ((c == col) or (c == colpair)):
                             continue
-                        if (self.b[9 * row + c].candidates == candPair):
-                            colpair = c
-                    if (colpair >= 0):
-                        for c in range(9):
-                            if ((c == col) or (c == colpair)):
-                                continue
-                            self.b[9 * row + c].candidates.difference_update(candPair)
-                    #update cand list in same col
-                    rowpair = -1
+                        self.b[9 * row + c].candidates.difference_update(candPair)
+                #update cand list in same col
+                rowpair = -1
+                for r in range(9):
+                    if (r == row):
+                        continue
+                    if (self.b[9 * r + col].candidates == candPair):
+                        rowpair = r
+                if (rowpair >= 0):
                     for r in range(9):
-                        if (r == row):
+                        if ((r == row) or (r == rowpair)):
                             continue
-                        if (self.b[9 * r + col].candidates == candPair):
+                        self.b[9 * r + col].candidates.difference_update(candPair)
+                #update cand list in same block
+                rowpair = -1
+                colpair = -1
+                rowstart = 3 * (row // 3)
+                colstart = 3 * (col // 3)
+                for r in range(rowstart, rowstart + 3):
+                    for c in range(colstart, colstart + 3):
+                        if (r == row and c == col):
+                            continue
+                        if (self.b[9 * r + c].candidates == candPair):
                             rowpair = r
-                    if (rowpair >= 0):
-                        for r in range(9):
-                            if ((r == row) or (r == rowpair)):
+                            colpair = c
+                if (rowpair >= 0 and colpair >= 0):
+                    for r in range(rowstart, rowstart + 3):
+                        for c in range(colstart, colstart + 3):
+                            if ((r == row and c == col) or (r == rowpair and c == colpair)):
                                 continue
-                            self.b[9 * r + col].candidates.difference_update(candPair)
+                            self.b[9 * r + c].candidates.difference_update(candPair)
         #look for hidden pairs
         for row in range(9):
             for col in range(9):
-                if (self.b[9 * row + col].isGap()):
-                    #search along row
-                    for c in range(9):
-                        if (c == col or not self.b[9 * row + c].isGap()):
+                if (not self.b[9 * row + col].isGap()):
+                    continue
+                #search along row
+                for c in range(9):
+                    if (c == col or not self.b[9 * row + c].isGap()):
+                        continue
+                    #collect all other candidates
+                    allOtherCands = set()
+                    for j in range(9):
+                        if (j == col or j == c):
+                            continue
+                        allOtherCands = allOtherCands.union(self.b[9 * row + j].candidates)
+                    t = self.b[9 * row + col].candidates.intersection(self.b[9 * row + c].candidates)
+                    t = t.difference(allOtherCands)
+                    if (len(t) == 2):
+                        self.b[9 * row + col].candidates = t
+                        self.b[9 * row + c].candidates = t
+                #search along col
+                for r in range(9):
+                    if (r == row or not self.b[9 * r + col].isGap()):
+                        continue
+                    #collect all other candidates
+                    allOtherCands = set()
+                    for i in range(9):
+                        if (i == row or i == r):
+                            continue
+                        allOtherCands = allOtherCands.union(self.b[9 * i + col].candidates)
+                    t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + col].candidates)
+                    t = t.difference(allOtherCands)
+                    if (len(t) == 2):
+                        self.b[9 * row + col].candidates = t
+                        self.b[9 * r + col].candidates = t
+                #search within block
+                rowstart = 3 * (row // 3)
+                colstart = 3 * (col // 3)
+                for r in range(rowstart, rowstart + 3):
+                    for c in range(colstart, colstart + 3):
+                        if ((r == row and c == col) or not self.b[9 * r + c].isGap()):
                             continue
                         #collect all other candidates
                         allOtherCands = set()
-                        for j in range(9):
-                            if (j == col or j == c):
-                                continue
-                            allOtherCands = allOtherCands.union(self.b[9 * row + j].candidates)
-                        t = self.b[9 * row + col].candidates.intersection(self.b[9 * row + c].candidates)
+                        for i in range(rowstart, rowstart + 3):
+                            for j in range(colstart, colstart + 3):
+                                if ((i == row and j == col) or (i == r and j == c)):
+                                    continue
+                                allOtherCands = allOtherCands.union(self.b[9 * i + j].candidates)
+                        t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + c].candidates)
                         t = t.difference(allOtherCands)
                         if (len(t) == 2):
                             self.b[9 * row + col].candidates = t
-                            self.b[9 * row + c].candidates = t
-                    #search along col
-                    for r in range(9):
-                        if (r == row or not self.b[9 * r + col].isGap()):
-                            continue
-                        #collect all other candidates
-                        allOtherCands = set()
-                        for i in range(9):
-                            if (i == row or i == r):
-                                continue
-                            allOtherCands = allOtherCands.union(self.b[9 * i + col].candidates)
-                        t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + col].candidates)
-                        t = t.difference(allOtherCands)
-                        if (len(t) == 2):
-                            self.b[9 * row + col].candidates = t
-                            self.b[9 * r + col].candidates = t
-                    #search within block
-                    rowstart = 3 * (row // 3)
-                    colstart = 3 * (col // 3)
-                    for r in range(rowstart, rowstart + 3):
-                        for c in range(colstart, colstart + 3):
-                            if ((r == row and c == col) or not self.b[9 * r + c].isGap()):
-                                continue
-                            #collect all other candidates
-                            allOtherCands = set()
-                            for i in range(rowstart, rowstart + 3):
-                                for j in range(colstart, colstart + 3):
-                                    if ((i == row and j == col) or (i == r and j == c)):
-                                        continue
-                                    allOtherCands = allOtherCands.union(self.b[9 * i + j].candidates)
-                            t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + c].candidates)
-                            t = t.difference(allOtherCands)
-                            if (len(t) == 2):
-                                self.b[9 * row + col].candidates = t
-                                self.b[9 * r + c].candidates = t
+                            self.b[9 * r + c].candidates = t
         return
     
     def solve(self, numIterations = 0):
