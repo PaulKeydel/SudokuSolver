@@ -28,38 +28,27 @@ aa = [
     ]
 
 class Cell:
-    def __init__(self):
-        self.val = 0
-        self.candidates = []
-        self.known = []
-        self.pairIdx = -1
+    def __init__(self, idx: int, digit: int):
+        #digit of the cell
+        self.val = digit
+        #position parameters
+        self.row = idx // 3
+        self.col = idx % 3
+        self.blk = 3 * (self.row // 3) + (self.col // 3)
+        self.blkidx = 3 * (self.row % 3) + (self.col % 3)
+        #set for storing candidates
+        self.candidates = set()
     
     def isEq(self, dig):
         return (self.val == dig)
     
-    def hasPair(self):
-        return (self.pairIdx != -1)
-    
     def isGap(self):
         return (self.val == 0)
-    
-    def set(self, dig):
-        self.val = dig
-        if (dig > 0):
-            self.candidates = []
-            self.known = []
-    
-    def isPairTo(self, cell):
-        assert(isinstance(cell, Cell))
-        return ((len(set(self.candidates)) == 2) & (set(self.candidates) == set(cell.candidates)))
 
 
 class SudokuBoard:
     def __init__(self, board):
-        self.b = [Cell() for _ in range(81)]
-        for row in range(9):
-            for col in range(9):
-                self.b[9 * row + col].val = board[row][col]
+        self.b = [Cell(i, board[i // 9][i % 9]) for i in range(81)]
     
     def at(self, row, col):
         assert(col >= 0 and col < 9)
@@ -99,50 +88,10 @@ class SudokuBoard:
             found = (self.atBlock(block, i) == digit)
             i = i + 1
         return found
-    
-    def isInBlockRow(self, block, row, digit):
-        assert(block >= 0 and block < 9)
-        assert(row >= 0 and row < 3)
-        return (self.atBlock(block, 3 * row + 0) == digit) or (self.atBlock(block, 3 * row + 1) == digit) or (self.atBlock(block, 3 * row + 2) == digit)
-    
-    def isInBlockCol(self, block, col, digit):
-        assert(block >= 0 and block < 9)
-        assert(col >= 0 and col < 3)
-        return (self.atBlock(block, col + 0) == digit) or (self.atBlock(block, col + 3) == digit) or (self.atBlock(block, col + 6) == digit)
-    
+
     def isPresent(self, row, col, digit):
         block = 3 * (row // 3) + (col // 3)
-        return (self.isInRow(row, digit) or self.isInCol(col, digit) or self.isInBlock(block, digit) or (digit in self.b[9 * row + col].known))
-    
-    def isUniqueGapInBlockRow(self, row, col):
-        block = 3 * (row // 3) + (col // 3)
-        idx = 3 * (row % 3) + (col % 3)
-        c = idx % 3
-        if (c == 0):
-            if ((self.atBlock(block, idx + 1) != 0 and self.atBlock(block, idx + 2) != 0) or (self.b[9 * row + col + 1].isPairTo(self.b[9 * row + col + 2]))):
-                return True
-        if (c == 1):
-            if ((self.atBlock(block, idx - 1) != 0 and self.atBlock(block, idx + 1) != 0) or (self.b[9 * row + col - 1].isPairTo(self.b[9 * row + col + 1]))):
-                return True
-        if (c == 2):
-            if ((self.atBlock(block, idx - 2) != 0 and self.atBlock(block, idx - 1) != 0) or (self.b[9 * row + col - 2].isPairTo(self.b[9 * row + col - 1]))):
-                return True
-        return False
-    
-    def isUniqueGapInBlockCol(self, row, col):
-        block = 3 * (row // 3) + (col // 3)
-        idx = 3 * (row % 3) + (col % 3)
-        r = idx // 3
-        if (r == 0):
-            if ((self.atBlock(block, idx + 3) != 0 and self.atBlock(block, idx + 6) != 0) or (self.b[9 * (row + 1) + col].isPairTo(self.b[9 * (row + 2) + col]))):
-                return True
-        if (r == 1):
-            if ((self.atBlock(block, idx - 3) != 0 and self.atBlock(block, idx + 3) != 0) or (self.b[9 * (row - 1) + col].isPairTo(self.b[9 * (row + 1) + col]))):
-                return True
-        if (r == 2):
-            if ((self.atBlock(block, idx - 6) != 0 and self.atBlock(block, idx - 3) != 0) or (self.b[9 * (row - 2) + col].isPairTo(self.b[9 * (row - 1) + col]))):
-                return True
-        return False
+        return (self.isInRow(row, digit) or self.isInCol(col, digit) or self.isInBlock(block, digit))
 
     def isComplete(self):
         for i in range(81):
@@ -176,99 +125,85 @@ class SudokuSolver(SudokuBoard):
                 continue
             for dig in range(1, 10):
                 if not self.isPresent(idx // 9, idx % 9, dig):
-                    self.b[idx].candidates.append(dig)
+                    self.b[idx].candidates.add(dig)
         return
+    
+    def searchForCandSingles(self):
+        #look for naked singles
+        for row in range(9):
+            for col in range(9):
+                if (len(self.b[9 * row + col].candidates) == 1):
+                    dig = self.b[9 * row + col].candidates.pop()
+                    self.b[9 * row + col].val = dig
+                    #update cand list in same row
+                    for c in range(9):
+                        if (c == col):
+                            continue
+                        self.b[9 * row + c].candidates.discard(dig)
+                    #update cand list in same col
+                    for r in range(9):
+                        if (r == row):
+                            continue
+                        self.b[9 * r + col].candidates.discard(dig)
+        #look for hidden singles
+        for row in range(9):
+            for col in range(9):
+                if (self.b[9 * row + col].isGap()):
+                    allOtherCands = set()
+                    #search along row and collect all other candidates
+                    for c in range(9):
+                        if (c == col or not self.b[9 * row + c].isGap()):
+                            continue
+                        allOtherCands = allOtherCands.union(self.b[9 * row + c].candidates)
+                    t = self.b[9 * row + col].candidates.difference(allOtherCands)
+                    if (len(t) == 1):
+                        self.b[9 * row + col].candidates = t
+                        dig = self.b[9 * row + col].candidates.pop()
+                        self.b[9 * row + col].val = dig
+                    allOtherCands = set()
+                    #search along col and collect all other candidates
+                    for r in range(9):
+                        if (r == row or not self.b[9 * r + col].isGap()):
+                            continue
+                        allOtherCands = allOtherCands.union(self.b[9 * r + col].candidates)
+                    t = self.b[9 * row + col].candidates.difference(allOtherCands)
+                    if (len(t) == 1):
+                        self.b[9 * row + col].candidates = t
+                        dig = self.b[9 * row + col].candidates.pop()
+                        self.b[9 * row + col].val = dig
     
     def searchForCandPairs(self):
         for row in range(9):
             for col in range(9):
-                if (self.b[9 * row + col].isGap() and not self.b[9 * row + col].hasPair()):
+                if (self.b[9 * row + col].isGap()):
                     allOtherCands = set()
                     #search along row
                     for c in range(9):
-                        if (c == col or self.b[9 * row + c].hasPair() or not self.b[9 * row + c].isGap()):
+                        if (c == col or not self.b[9 * row + c].isGap()):
                             continue
                         #collect all other candidates
                         for j in range(9):
                             if (j == col or j == c):
                                 continue
-                            allOtherCands = allOtherCands.union(set(self.b[9 * row + j].candidates))
-                        t = set(self.b[9 * row + col].candidates).intersection(set(self.b[9 * row + c].candidates))
+                            allOtherCands = allOtherCands.union(self.b[9 * row + j].candidates)
+                        t = self.b[9 * row + col].candidates.intersection(self.b[9 * row + c].candidates)
                         t = t.difference(allOtherCands)
                         if (len(t) == 2):
-                            self.b[9 * row + col].candidates = list(t)
-                            self.b[9 * row + col].pairIdx = c
-                            self.b[9 * row + c].candidates = list(t)
-                            self.b[9 * row + c].pairIdx = col
+                            self.b[9 * row + col].candidates = t
+                            self.b[9 * row + c].candidates = t
         #tbd: update known
         return
-
-    def perform_naked_single(self, block, idx):
-        if self.atBlock(block, idx) != 0:
-            return
-        row = 3 * (block // 3) + (idx // 3)
-        col = 3 * (block % 3) + (idx % 3)
-        num_exist_neighbors = 0
-        missing_neighbor = 0
-        for dig in range(1, 10):
-            if self.isPresent(row, col, dig):
-                num_exist_neighbors = num_exist_neighbors + 1
-            else:
-                missing_neighbor = dig
-        if num_exist_neighbors == 8:
-            self.b[9 * row + col].set(missing_neighbor)
-    
-    def perform_hidden_single(self, block, idx):
-        if self.atBlock(block, idx) != 0:
-            return
-        r = idx // 3
-        c = idx % 3
-        row = 3 * (block // 3) + r
-        col = 3 * (block % 3) + c
-        for dig in range(1, 10):
-            if self.isPresent(row, col, dig):
-                continue
-            #horizontal looking
-            if self.isUniqueGapInBlockRow(row, col):
-                if (r == 0 and self.isInRow(row + 1, dig) and self.isInRow(row + 2, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
-                if (r == 1 and self.isInRow(row - 1, dig) and self.isInRow(row + 1, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
-                if (r == 2 and self.isInRow(row - 2, dig) and self.isInRow(row - 1, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
-            #vertical looking
-            if self.isUniqueGapInBlockCol(row, col):
-                if (c == 0 and self.isInCol(col + 1, dig) and self.isInCol(col + 2, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
-                if (c == 1 and self.isInCol(col - 1, dig) and self.isInCol(col + 1, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
-                if (c == 2 and self.isInCol(col - 2, dig) and self.isInCol(col - 1, dig)):
-                    self.b[9 * row + col].set(dig)
-                    return
     
     def solve(self):
         valid = False
         while not valid:
-            for blk in range(9):
-                for idx in range(9):
-                    #apply the strategies
-                    self.perform_naked_single(blk, idx)
-                    self.perform_hidden_single(blk, idx)
+            self.searchForCandSingles()
+            self.searchForCandPairs()
             valid = self.valid()
     
 
 
-ss = SudokuSolver(a)
+ss = SudokuSolver(aa)
 ss.updateCands()
-print(ss.b[54+0].candidates)
-ss.searchForCandPairs()
-print(ss.b[54+0].candidates)
-print(ss.b[54+1].candidates)
-print(ss.b[54+2].candidates)
-#ss.solve()
-#ss.print()
+ss.solve()
+ss.print()
