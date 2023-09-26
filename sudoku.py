@@ -10,8 +10,8 @@ testboard1 = [
     [0, 0, 0,   0, 2, 0,   0, 0, 0],
 
     [0, 0, 0,   0, 1, 0,   0, 0, 0],
-    [0, 0, 4,   0, 0, 0,   7, 8, 9],
-    [0, 0, 0,   5, 0, 0,   0, 0, 0],
+    [0, 0, 4,   0, 0, 0,   0, 8, 9],
+    [0, 0, 0,   5, 0, 7,   0, 0, 0],
 
     [0, 0, 0,   0, 0, 0,   4, 1, 0],
     [7, 0, 0,   2, 3, 5,   0, 0, 0],
@@ -317,17 +317,72 @@ class SudokuBoard:
                 self.checkCellForHiddenPair(row, col)
         return
     
+    def searchForLockedCandsInBlocks(self):
+        #locked cand: union over cols/rows has excatly one element (at least two gaps)
+        #check: this cand is not in the cand list of all other cells
+        for rowstart in range(0, 9, 3):
+            for colstart in range(0, 9, 3):
+                #go through all rows in block
+                for r in range(rowstart, rowstart + 3):
+                    numGaps = 0
+                    lockedCands = set()
+                    for c in range(colstart, colstart + 3):
+                        if self.b[9 * r + c].isGap():
+                            numGaps = numGaps + 1
+                            lockedCands = lockedCands.union(self.b[9 * r + c].candidates)
+                    if (numGaps > 1):
+                        #check if lockedCands is not part of other cand lists
+                        allOtherCands = set()
+                        for i in range(rowstart, rowstart + 3):
+                            for j in range(colstart, colstart + 3):
+                                if (i == r or not self.b[9 * i + j].isGap()):
+                                    continue
+                                allOtherCands = allOtherCands.union(self.b[9 * i + j].candidates)
+                        t = lockedCands.difference(allOtherCands)
+                        if (len(t) == 1):
+                            dig = t.pop()
+                            for j in range(9):
+                                if ((j >= colstart) and (j < colstart + 3)):
+                                    continue
+                                self.b[9 * r + j].candidates.discard(dig)
+                #go through all cols in block
+                for c in range(colstart, colstart + 3):
+                    numGaps = 0
+                    lockedCands = set()
+                    for r in range(rowstart, rowstart + 3):
+                        if self.b[9 * r + c].isGap():
+                            numGaps = numGaps + 1
+                            lockedCands = lockedCands.union(self.b[9 * r + c].candidates)
+                    if (numGaps > 1):
+                        #check if lockedCands is not part of other cand lists
+                        allOtherCands = set()
+                        for i in range(rowstart, rowstart + 3):
+                            for j in range(colstart, colstart + 3):
+                                if (j == c or not self.b[9 * i + j].isGap()):
+                                    continue
+                                allOtherCands = allOtherCands.union(self.b[9 * i + j].candidates)
+                        t = lockedCands.difference(allOtherCands)
+                        if (len(t) == 1):
+                            dig = t.pop()
+                            for i in range(9):
+                                if ((i >= rowstart) and (i < rowstart + 3)):
+                                    continue
+                                self.b[9 * i + c].candidates.discard(dig)
+        return
+    
     def solve(self, numIterations = 0):
         if (numIterations == 0):
             valid = False
             while not valid:
                 self.searchForCandSingles()
                 self.searchForCandPairs()
+                self.searchForLockedCandsInBlocks()
                 valid = self.valid()
         else:
             for i in range(numIterations):
                 self.searchForCandSingles()
                 self.searchForCandPairs()
+                self.searchForLockedCandsInBlocks()
     
 
 
