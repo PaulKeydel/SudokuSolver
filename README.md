@@ -1,7 +1,6 @@
 # SudokuSolver
-Sudoku solving software that applies human strategies
-
-!Under Construction!
-Strategies that are already implemented:
-* Hidden single
-* Naked single
+This Python code can solve Sudokus by applying human strategies. Four logical strategies are implemented:
+* Hidden singles
+* Naked singles
+* Hidden pairs
+* Naked pairs
