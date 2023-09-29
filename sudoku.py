@@ -30,6 +30,19 @@ testboard2 = [
     [0, 0, 0,   8, 0, 0,   3, 0, 7],
     [0, 0, 0,   0, 0, 9,   4, 0, 0]
     ]
+testboard3 = [
+    [0, 0, 5,   6, 3, 9,   0, 0, 0],
+    [0, 7, 3,   0, 0, 0,   0, 0, 4],
+    [0, 0, 0,   0, 0, 0,   0, 0, 0],
+
+    [1, 0, 6,   9, 0, 5,   0, 0, 0],
+    [0, 0, 0,   0, 0, 0,   0, 6, 0],
+    [0, 9, 0,   0, 8, 0,   0, 7, 0],
+
+    [8, 6, 9,   1, 0, 0,   2, 0, 3],
+    [0, 1, 0,   0, 0, 2,   0, 0, 0],
+    [0, 0, 0,   0, 0, 0,   8, 0, 0]
+    ]
 
 class Cell:
     def __init__(self, idx: int, digit: int):
@@ -132,7 +145,6 @@ class SudokuBoard:
             for dig in range(1, 10):
                 if not self.isPresent(idx // 9, idx % 9, dig):
                     self.b[idx].candidates.add(dig)
-        return
     
     def updateCandsFromSolvedCell(self, row, col):
         newDigit = self.at(row, col).val
@@ -399,7 +411,7 @@ class SudokuBoard:
                                     continue
                                 allOtherCands = allOtherCands.union(self.at(i, j).candidates)
                         t = lockedCands.difference(allOtherCands)
-                        if (len(t) == 1):
+                        while(len(t) > 0):
                             dig = t.pop()
                             for j in range(9):
                                 if ((j >= colstart) and (j < colstart + 3)):
@@ -422,7 +434,7 @@ class SudokuBoard:
                                     continue
                                 allOtherCands = allOtherCands.union(self.at(i, j).candidates)
                         t = lockedCands.difference(allOtherCands)
-                        if (len(t) == 1):
+                        while(len(t) > 0):
                             dig = t.pop()
                             for i in range(9):
                                 if ((i >= rowstart) and (i < rowstart + 3)):
@@ -445,7 +457,7 @@ class SudokuBoard:
     
 
 
-sb = SudokuBoard(testboard2)
+sb = SudokuBoard(testboard3)
 sb.updateCands()
 #Do we need printings from cand lists?
 testprintings = False
