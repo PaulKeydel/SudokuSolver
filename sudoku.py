@@ -1,21 +1,21 @@
-import numpy as np
-
+#define boards to test
 #cell[9 * 1 + 1]: hidden single
 #cell[9 * 4 + 4]: naked single
 #cell[9 * 6 + 8] and cell[9 * 8 + 8]: hidden pair (5, 7)
 #cell[9 * 6 + 8] and cell[9 * 8 + 8]: naked pair (5, 7), check this with cell[9 * 0 + 8]
+#cell[9 * 5 + 0], cell[9 * 5 + 1] and cell[9 * 5 + 2]: naked triplet (4, 8, 9), check this with cell[9 * 5 + 5]
 testboard1 = [
-    [0, 0, 0,   0, 0, 0,   2, 0, 0],
-    [1, 0, 3,   0, 0, 0,   0, 0, 0],
+    [0, 0, 0,   0, 4, 0,   2, 0, 0],
+    [1, 0, 3,   0, 7, 0,   0, 0, 0],
     [0, 0, 0,   0, 2, 0,   0, 0, 0],
 
-    [0, 0, 0,   0, 1, 0,   0, 0, 0],
-    [0, 0, 4,   0, 0, 0,   0, 8, 9],
-    [0, 0, 0,   5, 0, 7,   0, 0, 0],
+    [3, 6, 7,   0, 0, 0,   0, 0, 0],
+    [5, 1, 2,   0, 0, 0,   0, 8, 9],
+    [0, 0, 0,   0, 0, 0,   0, 0, 0],
 
     [0, 0, 0,   0, 0, 0,   4, 1, 0],
     [7, 0, 0,   2, 3, 5,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   2, 3, 0]
+    [0, 0, 0,   0, 0, 0,   3, 2, 0]
     ]
 testboard2 = [
     [2, 5, 0,   1, 3, 0,   9, 8, 0],
@@ -36,8 +36,8 @@ class Cell:
         #digit of the cell
         self.val = digit
         #position parameters
-        self.row = idx // 3
-        self.col = idx % 3
+        self.row = idx // 9
+        self.col = idx % 9
         self.blk = 3 * (self.row // 3) + (self.col // 3)
         self.blkidx = 3 * (self.row % 3) + (self.col % 3)
         #set for storing candidates
@@ -48,6 +48,10 @@ class Cell:
     
     def isGap(self):
         return (self.val == 0)
+    
+    #length of cands set
+    def lc(self):
+        return len(self.candidates)
 
 
 class SudokuBoard:
@@ -127,21 +131,17 @@ class SudokuBoard:
                     self.b[idx].candidates.add(dig)
         return
     
-    def checkCellForNakedSingle(self, row, col):
-        if (len(self.b[9 * row + col].candidates) != 1):
-            return
-        dig = self.b[9 * row + col].candidates.pop()
-        self.b[9 * row + col].val = dig
+    def updateCandsFromSolvedCell(self, row, col, newDigit):
         #update cand list in same row
         for c in range(9):
             if (c == col):
                 continue
-            self.b[9 * row + c].candidates.discard(dig)
+            self.b[9 * row + c].candidates.discard(newDigit)
         #update cand list in same col
         for r in range(9):
             if (r == row):
                 continue
-            self.b[9 * r + col].candidates.discard(dig)
+            self.b[9 * r + col].candidates.discard(newDigit)
         #update cand list in same block
         rowstart = 3 * (row // 3)
         colstart = 3 * (col // 3)
@@ -149,7 +149,15 @@ class SudokuBoard:
             for c in range(colstart, colstart + 3):
                 if (r == row and c == col):
                     continue
-                self.b[9 * r + c].candidates.discard(dig)
+                self.b[9 * r + c].candidates.discard(newDigit)
+        return
+    
+    def checkCellForNakedSingle(self, row, col):
+        if (len(self.b[9 * row + col].candidates) != 1):
+            return
+        dig = self.b[9 * row + col].candidates.pop()
+        self.b[9 * row + col].val = dig
+        self.updateCandsFromSolvedCell(row, col, dig)
         return
     
     def checkCellForHiddenSingle(self, row, col):
@@ -166,6 +174,8 @@ class SudokuBoard:
             self.b[9 * row + col].candidates = t
             dig = self.b[9 * row + col].candidates.pop()
             self.b[9 * row + col].val = dig
+            self.updateCandsFromSolvedCell(row, col, dig)
+            return
         #search along col and collect all other candidates
         allOtherCands = set()
         for r in range(9):
@@ -177,6 +187,8 @@ class SudokuBoard:
             self.b[9 * row + col].candidates = t
             dig = self.b[9 * row + col].candidates.pop()
             self.b[9 * row + col].val = dig
+            self.updateCandsFromSolvedCell(row, col, dig)
+            return
         #search within block and collect all other candidates
         allOtherCands = set()
         rowstart = 3 * (row // 3)
@@ -191,107 +203,99 @@ class SudokuBoard:
             self.b[9 * row + col].candidates = t
             dig = self.b[9 * row + col].candidates.pop()
             self.b[9 * row + col].val = dig
-        return
-    
-    def searchForCandSingles(self):
-        #look for naked singles and update cand list
-        for row in range(9):
-            for col in range(9):
-                self.checkCellForNakedSingle(row, col)
-        #look for hidden singles
-        for row in range(9):
-            for col in range(9):
-                self.checkCellForHiddenSingle(row, col)
-        return
+            self.updateCandsFromSolvedCell(row, col, dig)
+            return
     
     def checkCellForNakedPair(self, row, col):
-        if (len(self.b[9 * row + col].candidates) != 2):
+        if (self.b[9 * row + col].lc() != 2):
             return
         candPair = self.b[9 * row + col].candidates
-        #update cand list in same row
-        colpair = -1
-        for c in range(9):
-            if (c == col):
-                continue
-            if (self.b[9 * row + c].candidates == candPair):
-                colpair = c
-        if (colpair >= 0):
-            for c in range(9):
-                if ((c == col) or (c == colpair)):
-                    continue
-                self.b[9 * row + c].candidates.difference_update(candPair)
-        #update cand list in same col
-        rowpair = -1
-        for r in range(9):
-            if (r == row):
-                continue
-            if (self.b[9 * r + col].candidates == candPair):
-                rowpair = r
-        if (rowpair >= 0):
-            for r in range(9):
-                if ((r == row) or (r == rowpair)):
-                    continue
-                self.b[9 * r + col].candidates.difference_update(candPair)
-        #update cand list in same block
         rowpair = -1
         colpair = -1
-        rowstart = 3 * (row // 3)
-        colstart = 3 * (col // 3)
-        for r in range(rowstart, rowstart + 3):
-            for c in range(colstart, colstart + 3):
-                if (r == row and c == col):
-                    continue
+        for idx in range(9):
+            #if cell(row, col) can basically be a naked pair, look for the other part in same row
+            c = idx
+            if (c != col):
+                if (self.b[9 * row + c].candidates == candPair):
+                    colpair = c
+                if (colpair >= 0):
+                    for j in range(9):
+                        if ((j == col) or (j == colpair)):
+                            continue
+                        self.b[9 * row + j].candidates.difference_update(candPair)
+                    return
+            #if cell(row, col) can basically be a naked pair, look for the other part in same col
+            r = idx
+            if (r != row):
+                if (self.b[9 * r + col].candidates == candPair):
+                    rowpair = r
+                if (rowpair >= 0):
+                    for i in range(9):
+                        if ((i == row) or (i == rowpair)):
+                            continue
+                        self.b[9 * i + col].candidates.difference_update(candPair)
+                    return
+            #if cell(row, col) can basically be a naked pair, look for the other part in same block
+            blk = self.b[9 * row + col].blk
+            blkIdx = idx
+            rowstart = 3 * (blk // 3)
+            colstart = 3 * (blk % 3)
+            r = rowstart + (blkIdx // 3)
+            c = colstart + (blkIdx % 3)
+            if (r != row or c != col):
                 if (self.b[9 * r + c].candidates == candPair):
                     rowpair = r
                     colpair = c
-        if (rowpair >= 0 and colpair >= 0):
-            for r in range(rowstart, rowstart + 3):
-                for c in range(colstart, colstart + 3):
-                    if ((r == row and c == col) or (r == rowpair and c == colpair)):
-                        continue
-                    self.b[9 * r + c].candidates.difference_update(candPair)
-        return
+                if (rowpair >= 0 and colpair >= 0):
+                    for i in range(rowstart, rowstart + 3):
+                        for j in range(colstart, colstart + 3):
+                            if ((i == row and j == col) or (i == rowpair and j == colpair)):
+                                continue
+                            self.b[9 * i + j].candidates.difference_update(candPair)
+                    return
     
     def checkCellForHiddenPair(self, row, col):
         if (not self.b[9 * row + col].isGap()):
             return
-        #search along row
-        for c in range(9):
-            if (c == col or not self.b[9 * row + c].isGap()):
-                continue
-            #collect all other candidates
-            allOtherCands = set()
-            for j in range(9):
-                if (j == col or j == c):
-                    continue
-                allOtherCands = allOtherCands.union(self.b[9 * row + j].candidates)
-            t = self.b[9 * row + col].candidates.intersection(self.b[9 * row + c].candidates)
-            t = t.difference(allOtherCands)
-            if (len(t) == 2):
-                self.b[9 * row + col].candidates = t
-                self.b[9 * row + c].candidates = t
-        #search along col
-        for r in range(9):
-            if (r == row or not self.b[9 * r + col].isGap()):
-                continue
-            #collect all other candidates
-            allOtherCands = set()
-            for i in range(9):
-                if (i == row or i == r):
-                    continue
-                allOtherCands = allOtherCands.union(self.b[9 * i + col].candidates)
-            t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + col].candidates)
-            t = t.difference(allOtherCands)
-            if (len(t) == 2):
-                self.b[9 * row + col].candidates = t
-                self.b[9 * r + col].candidates = t
-        #search within block
-        rowstart = 3 * (row // 3)
-        colstart = 3 * (col // 3)
-        for r in range(rowstart, rowstart + 3):
-            for c in range(colstart, colstart + 3):
-                if ((r == row and c == col) or not self.b[9 * r + c].isGap()):
-                    continue
+        for idx in range(9):
+            #search for a pair along row
+            c = idx
+            if (c != col and self.b[9 * row + c].isGap()):
+                #collect all other candidates
+                allOtherCands = set()
+                for j in range(9):
+                    if (j == col or j == c):
+                        continue
+                    allOtherCands = allOtherCands.union(self.b[9 * row + j].candidates)
+                t = self.b[9 * row + col].candidates.intersection(self.b[9 * row + c].candidates)
+                t = t.difference(allOtherCands)
+                if (len(t) == 2):
+                    self.b[9 * row + col].candidates = t
+                    self.b[9 * row + c].candidates = t
+                    return
+            #search for a pair along col
+            r = idx
+            if (r != row and self.b[9 * r + col].isGap()):
+                #collect all other candidates
+                allOtherCands = set()
+                for i in range(9):
+                    if (i == row or i == r):
+                        continue
+                    allOtherCands = allOtherCands.union(self.b[9 * i + col].candidates)
+                t = self.b[9 * row + col].candidates.intersection(self.b[9 * r + col].candidates)
+                t = t.difference(allOtherCands)
+                if (len(t) == 2):
+                    self.b[9 * row + col].candidates = t
+                    self.b[9 * r + col].candidates = t
+                    return
+            #search the pair within block
+            blk = self.b[9 * row + col].blk
+            blkIdx = idx
+            rowstart = 3 * (blk // 3)
+            colstart = 3 * (blk % 3)
+            r = rowstart + (blkIdx // 3)
+            c = colstart + (blkIdx % 3)
+            if ((r != row or c != col) and self.b[9 * r + c].isGap()):
                 #collect all other candidates
                 allOtherCands = set()
                 for i in range(rowstart, rowstart + 3):
@@ -304,16 +308,58 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.b[9 * row + col].candidates = t
                     self.b[9 * r + c].candidates = t
-        return
+                    return
     
-    def searchForCandPairs(self):
-        #look for naked pairs and update cand list
+    def checkCellForNakedTriplet(self, row, col):
+        if (self.b[9 * row + col].lc() != 2 and self.b[9 * row + col].lc() != 3):
+            return
+        rowpair = [-1, -1]
+        colpair = [-1, -1]
+        for idx0 in range(9):
+            for idx1 in range(9):
+                #if cell(row, col) can basically be a naked triple, look for the other part in same row
+                c0 = idx0
+                c1 = idx1
+                if (c0 != col and c1 != col and c0 != c1 and (self.b[9 * row + c0].lc() > 1) and (self.b[9 * row + c1].lc() > 1)):
+                    u = self.b[9 * row + col].candidates
+                    u = u.union(self.b[9 * row + c0].candidates)
+                    u = u.union(self.b[9 * row + c1].candidates)
+                    if (len(u) == 3):
+                        colpair = [c0, c1]
+                    if (colpair != [-1, -1]):
+                        for j in range(9):
+                            if ((j == col) or (j == colpair[0] or (j == colpair[1]))):
+                                continue
+                            self.b[9 * row + j].candidates.difference_update(u)
+                        return
+                #if cell(row, col) can basically be a naked triple, look for the other part in same col
+                r0 = idx0
+                r1 = idx1
+                if (r0 != row and r1 != row and r0 != r1 and (self.b[9 * r0 + col].lc() > 1) and (self.b[9 * r1 + col].lc() > 1)):
+                    u = self.b[9 * row + col].candidates
+                    u = u.union(self.b[9 * r0 + col].candidates)
+                    u = u.union(self.b[9 * r1 + col].candidates)
+                    if (len(u) == 3):
+                        rowpair = [r0, r1]
+                    if (rowpair != [-1, -1]):
+                        for i in range(9):
+                            if ((i == row) or (i == rowpair[0] or (i == rowpair[1]))):
+                                continue
+                            self.b[9 * i + col].candidates.difference_update(u)
+                        return
+    
+    def searchForNakedTuples(self):
         for row in range(9):
             for col in range(9):
+                self.checkCellForNakedSingle(row, col)
                 self.checkCellForNakedPair(row, col)
-        #look for hidden pairs
+                self.checkCellForNakedTriplet(row, col)
+        return
+
+    def searchForHiddenTuples(self):
         for row in range(9):
             for col in range(9):
+                self.checkCellForHiddenSingle(row, col)
                 self.checkCellForHiddenPair(row, col)
         return
     
@@ -374,14 +420,14 @@ class SudokuBoard:
         if (numIterations == 0):
             valid = False
             while not valid:
-                self.searchForCandSingles()
-                self.searchForCandPairs()
+                self.searchForNakedTuples()
+                self.searchForHiddenTuples()
                 self.searchForLockedCandsInBlocks()
                 valid = self.valid()
         else:
             for i in range(numIterations):
-                self.searchForCandSingles()
-                self.searchForCandPairs()
+                self.searchForNakedTuples()
+                self.searchForHiddenTuples()
                 self.searchForLockedCandsInBlocks()
     
 
@@ -393,6 +439,7 @@ sb.updateCands()
 #cell[9 * 4 + 4]: naked single
 #cell[9 * 6 + 8] and cell[9 * 8 + 8]: hidden pair (5, 7)
 #cell[9 * 6 + 8] and cell[9 * 8 + 8]: naked pair (5, 7), check this with cell[9 * 0 + 8]
+#cell[9 * 5 + 0], cell[9 * 5 + 1] and cell[9 * 5 + 2]: naked triplet (4, 8, 9), check this with cell[9 * 5 + 5]
 
 sb.solve(numIterations = 2)
 
@@ -406,5 +453,7 @@ print("Digit and Cands of cell(8, 8):")
 print([sb.b[9 * 8 + 8].val, sb.b[9 * 8 + 8].candidates])
 print("Digit and Cands of cell(0, 8):")
 print([sb.b[9 * 0 + 8].val, sb.b[9 * 0 + 8].candidates])
+print("Digit and Cands of cell(5, 5):")
+print([sb.b[9 * 5 + 5].val, sb.b[9 * 5 + 5].candidates])
 
 #sb.print()
