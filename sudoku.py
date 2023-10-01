@@ -186,9 +186,8 @@ class SudokuBoard:
             allOtherCands = allOtherCands.union(self.at(row, c).candidates)
         t = self.at(row, col).candidates.difference(allOtherCands)
         if (len(t) == 1):
-            self.at(row, col).candidates = t.copy()
-            dig = self.at(row, col).candidates.pop()
-            self.at(row, col).val = dig
+            self.at(row, col).candidates.clear()
+            self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
             return True
         #search along col and collect all other candidates
@@ -199,9 +198,8 @@ class SudokuBoard:
             allOtherCands = allOtherCands.union(self.at(r, col).candidates)
         t = self.at(row, col).candidates.difference(allOtherCands)
         if (len(t) == 1):
-            self.at(row, col).candidates = t.copy()
-            dig = self.at(row, col).candidates.pop()
-            self.at(row, col).val = dig
+            self.at(row, col).candidates.clear()
+            self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
             return True
         #search within block and collect all other candidates
@@ -215,9 +213,8 @@ class SudokuBoard:
                 allOtherCands = allOtherCands.union(self.at(r, c).candidates)
         t = self.at(row, col).candidates.difference(allOtherCands)
         if (len(t) == 1):
-            self.at(row, col).candidates = t.copy()
-            dig = self.at(row, col).candidates.pop()
-            self.at(row, col).val = dig
+            self.at(row, col).candidates.clear()
+            self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
             return True
         return False
@@ -365,6 +362,50 @@ class SudokuBoard:
                         return True
         return False
     
+    def checkCellForXWing(self, row, col) -> bool:
+        if (not self.at(row, col).isGap()):
+            return False
+        for r in range(row + 1, 9, 1):
+            for c in range(col + 1, 9, 1):
+                if not(self.at(row, c).isGap() and self.at(r, col).isGap() and self.at(r, c).isGap()):
+                    continue
+                t = self.at(row, col).candidates.copy()
+                t = t.intersection(self.at(row, c).candidates)
+                t = t.intersection(self.at(r, col).candidates)
+                t = t.intersection(self.at(r, c).candidates)
+                #check if the x pattern has a common candidate
+                if (len(t) == 0):
+                    continue
+                #check conditions for x-wing column-wise
+                allOtherCands = set()
+                for j in range(9):
+                    if (j != col and j != c):
+                        allOtherCands = allOtherCands.union(self.at(row, j).candidates)
+                        allOtherCands = allOtherCands.union(self.at(r, j).candidates)
+                tt = t.difference(allOtherCands)
+                if (len(tt) == 1):
+                    dig = tt.pop()
+                    for i in range(9):
+                        if (i != row and i != r):
+                            self.at(i, col).candidates.discard(dig)
+                            self.at(i, c).candidates.discard(dig)
+                    return True
+                #check conditions for x-wing row-wise
+                allOtherCands = set()
+                for i in range(9):
+                    if (i != row and i != r):
+                        allOtherCands = allOtherCands.union(self.at(i, col).candidates)
+                        allOtherCands = allOtherCands.union(self.at(i, c).candidates)
+                tt = t.difference(allOtherCands)
+                if (len(tt) == 1):
+                    dig = tt.pop()
+                    for j in range(9):
+                        if (j != col and j != c):
+                            self.at(row, j).candidates.discard(dig)
+                            self.at(r, j).candidates.discard(dig)
+                    return True
+        return False
+    
     def searchForNakedTuples(self):
         for row in range(9):
             for col in range(9):
@@ -387,6 +428,15 @@ class SudokuBoard:
                 if self.checkCellForHiddenSingle(row, col):
                     continue
                 if self.checkCellForHiddenPair(row, col):
+                    continue
+
+    def searchForWings(self):
+        for row in range(9):
+            for col in range(9):
+                if (self.at(row, col).isGap() == False):
+                    assert(self.at(row, col).lc() == 0)
+                    continue
+                if self.checkCellForXWing(row, col):
                     continue
     
     def searchForLockedCandsInBlocks(self):
@@ -448,12 +498,14 @@ class SudokuBoard:
                 self.searchForNakedTuples()
                 self.searchForHiddenTuples()
                 self.searchForLockedCandsInBlocks()
+                self.searchForWings()
                 valid = self.valid()
         else:
             for i in range(numIterations):
                 self.searchForNakedTuples()
                 self.searchForHiddenTuples()
                 self.searchForLockedCandsInBlocks()
+                self.searchForWings()
     
 
 

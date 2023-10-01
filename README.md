@@ -4,5 +4,6 @@ This Python code can solve Sudokus by applying human strategies. Five logical st
 * Naked singles
 * Hidden pairs
 * Naked pairs
-* Naked Triplet
+* Naked triplets
 * Locked candidates in blocks
+* X-Wings
