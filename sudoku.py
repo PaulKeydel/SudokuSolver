@@ -176,7 +176,7 @@ class SudokuBoard:
         return True
     
     def checkCellForHiddenSingle(self, row, col) -> bool:
-        if (not self.at(row, col).isGap()):
+        if (self.at(row, col).lc() < 2):
             return False
         #search along row and collect all other candidates
         allOtherCands = set()
@@ -268,7 +268,7 @@ class SudokuBoard:
         return False
     
     def checkCellForHiddenPair(self, row, col) -> bool:
-        if (not self.at(row, col).isGap()):
+        if (self.at(row, col).lc() < 3):
             return False
         for idx in range(9):
             #search for a pair along row
@@ -326,8 +326,6 @@ class SudokuBoard:
     def checkCellForNakedTriplet(self, row, col) -> bool:
         if (self.at(row, col).lc() != 2 and self.at(row, col).lc() != 3):
             return False
-        rowpair = [-1, -1]
-        colpair = [-1, -1]
         for idx0 in range(9):
             for idx1 in range(9):
                 #if cell(row, col) can basically be a naked triple, look for the other part in same row
@@ -338,10 +336,8 @@ class SudokuBoard:
                     u = u.union(self.at(row, c0).candidates)
                     u = u.union(self.at(row, c1).candidates)
                     if (len(u) == 3):
-                        colpair = [c0, c1]
-                    if (colpair != [-1, -1]):
                         for j in range(9):
-                            if ((j == col) or (j == colpair[0]) or (j == colpair[1])):
+                            if ((j == col) or (j == c0) or (j == c1)):
                                 continue
                             self.at(row, j).candidates.difference_update(u)
                         return True
@@ -353,10 +349,8 @@ class SudokuBoard:
                     u = u.union(self.at(r0, col).candidates)
                     u = u.union(self.at(r1, col).candidates)
                     if (len(u) == 3):
-                        rowpair = [r0, r1]
-                    if (rowpair != [-1, -1]):
                         for i in range(9):
-                            if ((i == row) or (i == rowpair[0]) or (i == rowpair[1])):
+                            if ((i == row) or (i == r0) or (i == r1)):
                                 continue
                             self.at(i, col).candidates.difference_update(u)
                         return True
