@@ -73,6 +73,7 @@ class Cell:
 class SudokuBoard:
     def __init__(self, board):
         self.b = [Cell(i, board[i // 9][i % 9]) for i in range(81)]
+        self.solvingSteps = list()
     
     def at(self, row, col) -> Cell:
         assert(col >= 0 and col < 9)
@@ -137,6 +138,10 @@ class SudokuBoard:
             print("{}  {}  {}    {}  {}  {}    {}  {}  {}".format(*[self.at(row, c).val for c in range(9)]))
             if (row % 3 == 2):
                 print("")
+
+    def printSolvingSteps(self):
+        for k in range(len(self.solvingSteps)):
+            print(self.solvingSteps[k])
     
     def updateCands(self):
         for idx in range(81):
@@ -400,6 +405,45 @@ class SudokuBoard:
                     return True
         return False
     
+    def checkCellForLockedCandsInBlocks(self, row, col) -> bool:
+        if (self.at(row, col).lc() < 2):
+            return False
+        rowstart = self.at(row, col).rowBlkPos
+        colstart = self.at(row, col).colBlkPos
+        #check if current cand list has unique elements within all other block rows
+        allOtherCands = set()
+        for i in range(rowstart, rowstart + 3):
+            for j in range(colstart, colstart + 3):
+                if (i == row or not self.at(i, j).isGap()):
+                    continue
+                allOtherCands = allOtherCands.union(self.at(i, j).candidates)
+        lockedCands = self.at(row, col).candidates.difference(allOtherCands)
+        if (len(lockedCands) > 0):
+            while(len(lockedCands) > 0):
+                dig = lockedCands.pop()
+                for j in range(9):
+                    if ((j >= colstart) and (j < colstart + 3)):
+                        continue
+                    self.at(row, j).candidates.discard(dig)
+            return True
+        #check if current cand list has unique elements within all other block cols
+        allOtherCands = set()
+        for i in range(rowstart, rowstart + 3):
+            for j in range(colstart, colstart + 3):
+                if (j == col or not self.at(i, j).isGap()):
+                    continue
+                allOtherCands = allOtherCands.union(self.at(i, j).candidates)
+        lockedCands = self.at(row, col).candidates.difference(allOtherCands)
+        if (len(lockedCands) > 0):
+            while(len(lockedCands) > 0):
+                dig = lockedCands.pop()
+                for i in range(9):
+                    if ((i >= rowstart) and (i < rowstart + 3)):
+                        continue
+                    self.at(i, col).candidates.discard(dig)
+            return True
+        return False
+    
     def searchForNakedTuples(self):
         for row in range(9):
             for col in range(9):
@@ -407,10 +451,13 @@ class SudokuBoard:
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForNakedSingle(row, col):
+                    self.solvingSteps.append("({}, {}): Naked Single".format(row, col))
                     continue
                 if self.checkCellForNakedPair(row, col):
+                    self.solvingSteps.append("({}, {}): Naked Pair".format(row, col))
                     continue
                 if self.checkCellForNakedTriplet(row, col):
+                    self.solvingSteps.append("({}, {}): Naked Triplet".format(row, col))
                     continue
 
     def searchForHiddenTuples(self):
@@ -420,70 +467,24 @@ class SudokuBoard:
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForHiddenSingle(row, col):
+                    self.solvingSteps.append("({}, {}): Hidden Single".format(row, col))
                     continue
                 if self.checkCellForHiddenPair(row, col):
+                    self.solvingSteps.append("({}, {}): Hidden Pair".format(row, col))
                     continue
 
-    def searchForWings(self):
+    def searchForLockedBlockCandsAndWings(self):
         for row in range(9):
             for col in range(9):
                 if (self.at(row, col).isGap() == False):
                     assert(self.at(row, col).lc() == 0)
                     continue
-                if self.checkCellForXWing(row, col):
+                if self.checkCellForLockedCandsInBlocks(row, col):
+                    self.solvingSteps.append("({}, {}): Locked Cands".format(row, col))
                     continue
-    
-    def searchForLockedCandsInBlocks(self):
-        #locked cand: union over cols/rows has excatly one element (at least two gaps)
-        #check: this cand is not in the cand list of all other cells
-        for rowstart in range(0, 9, 3):
-            for colstart in range(0, 9, 3):
-                #go through all rows in block
-                for r in range(rowstart, rowstart + 3):
-                    numGaps = 0
-                    lockedCands = set()
-                    for c in range(colstart, colstart + 3):
-                        if self.at(r, c).isGap():
-                            numGaps = numGaps + 1
-                            lockedCands = lockedCands.union(self.at(r, c).candidates)
-                    if (numGaps > 1):
-                        #check if lockedCands is not part of other cand lists
-                        allOtherCands = set()
-                        for i in range(rowstart, rowstart + 3):
-                            for j in range(colstart, colstart + 3):
-                                if (i == r or not self.at(i, j).isGap()):
-                                    continue
-                                allOtherCands = allOtherCands.union(self.at(i, j).candidates)
-                        t = lockedCands.difference(allOtherCands)
-                        while(len(t) > 0):
-                            dig = t.pop()
-                            for j in range(9):
-                                if ((j >= colstart) and (j < colstart + 3)):
-                                    continue
-                                self.at(r, j).candidates.discard(dig)
-                #go through all cols in block
-                for c in range(colstart, colstart + 3):
-                    numGaps = 0
-                    lockedCands = set()
-                    for r in range(rowstart, rowstart + 3):
-                        if self.at(r, c).isGap():
-                            numGaps = numGaps + 1
-                            lockedCands = lockedCands.union(self.at(r, c).candidates)
-                    if (numGaps > 1):
-                        #check if lockedCands is not part of other cand lists
-                        allOtherCands = set()
-                        for i in range(rowstart, rowstart + 3):
-                            for j in range(colstart, colstart + 3):
-                                if (j == c or not self.at(i, j).isGap()):
-                                    continue
-                                allOtherCands = allOtherCands.union(self.at(i, j).candidates)
-                        t = lockedCands.difference(allOtherCands)
-                        while(len(t) > 0):
-                            dig = t.pop()
-                            for i in range(9):
-                                if ((i >= rowstart) and (i < rowstart + 3)):
-                                    continue
-                                self.at(i, c).candidates.discard(dig)
+                if self.checkCellForXWing(row, col):
+                    self.solvingSteps.append("({}, {}): X-Wing".format(row, col))
+                    continue
     
     def solve(self, numIterations = 0):
         if (numIterations == 0):
@@ -491,15 +492,13 @@ class SudokuBoard:
             while not valid:
                 self.searchForNakedTuples()
                 self.searchForHiddenTuples()
-                self.searchForLockedCandsInBlocks()
-                self.searchForWings()
+                self.searchForLockedBlockCandsAndWings()
                 valid = self.valid()
         else:
             for i in range(numIterations):
                 self.searchForNakedTuples()
                 self.searchForHiddenTuples()
-                self.searchForLockedCandsInBlocks()
-                self.searchForWings()
+                self.searchForLockedBlockCandsAndWings()
     
 
 
@@ -531,3 +530,4 @@ if (testprintings):
 else:
     sb.solve()
     sb.print()
+    sb.printSolvingSteps()
