@@ -139,11 +139,16 @@ class SudokuBoard:
             if (row % 3 == 2):
                 print("")
 
-    def printSolvingSteps(self):
+    def printSolvingSteps(self, printFullSteps = True):
         for k in range(len(self.solvingSteps)):
-            print(self.solvingSteps[k])
+            assert(len(self.solvingSteps[k]) == 4)
+            if printFullSteps:
+                print("({}, {}): {}".format(self.solvingSteps[k][0],self.solvingSteps[k][1],self.solvingSteps[k][2]))
+            else:
+                if (self.solvingSteps[k][3]):
+                    print("({}, {}): {}".format(self.solvingSteps[k][0],self.solvingSteps[k][1],self.solvingSteps[k][2]))
     
-    def updateCands(self):
+    def collectCands(self):
         for idx in range(81):
             if not self.b[idx].isGap():
                 continue
@@ -172,12 +177,43 @@ class SudokuBoard:
                     continue
                 self.at(r, c).candidates.discard(newDigit)
     
+    def updateCandsInRow(self, row, excludedPositions: list, dig) -> bool:
+        couldReduce = False
+        for j in range(9):
+            if (j in excludedPositions):
+                continue
+            if (dig in self.at(row, j).candidates):
+                couldReduce = True
+            self.at(row, j).candidates.discard(dig)
+        return couldReduce
+    
+    def updateCandsInCol(self, col, excludedPositions: list, dig) -> bool:
+        couldReduce = False
+        for i in range(9):
+            if (i in excludedPositions):
+                continue
+            if (dig in self.at(i, col).candidates):
+                couldReduce = True
+            self.at(i, col).candidates.discard(dig)
+        return couldReduce
+    
+    def updateCandsInBlock(self, blk, excludedPositions: list, dig) -> bool:
+        couldReduce = False
+        for idx in range(9):
+            if (idx in excludedPositions):
+                continue
+            if (dig in self.atBlock(blk, idx).candidates):
+                couldReduce = True
+            self.atBlock(blk, idx).candidates.discard(dig)
+        return couldReduce
+
     def checkCellForNakedSingle(self, row, col) -> bool:
         if (self.at(row, col).lc() != 1):
             return False
         dig = self.at(row, col).candidates.pop()
         self.at(row, col).val = dig
         self.updateCandsFromSolvedCell(row, col)
+        self.solvingSteps.append([row, col, "Naked Single", True])
         return True
     
     def checkCellForHiddenSingle(self, row, col) -> bool:
@@ -194,6 +230,7 @@ class SudokuBoard:
             self.at(row, col).candidates.clear()
             self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
+            self.solvingSteps.append([row, col, "Hidden Single", True])
             return True
         #search along col and collect all other candidates
         allOtherCands = set()
@@ -206,6 +243,7 @@ class SudokuBoard:
             self.at(row, col).candidates.clear()
             self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
+            self.solvingSteps.append([row, col, "Hidden Single", True])
             return True
         #search within block and collect all other candidates
         allOtherCands = set()
@@ -221,13 +259,14 @@ class SudokuBoard:
             self.at(row, col).candidates.clear()
             self.at(row, col).val = t.pop()
             self.updateCandsFromSolvedCell(row, col)
+            self.solvingSteps.append([row, col, "Hidden Single", True])
             return True
         return False
     
     def checkCellForNakedPair(self, row, col) -> bool:
         if (self.at(row, col).lc() != 2):
             return False
-        candPair = self.b[9 * row + col].candidates
+        candPair = self.b[9 * row + col].candidates.copy()
         rowpair = -1
         colpair = -1
         for idx in range(9):
@@ -236,25 +275,28 @@ class SudokuBoard:
             if (c != col):
                 if (self.at(row, c).candidates == candPair):
                     colpair = c
+                stepReducedCands = False
                 if (colpair >= 0):
-                    for j in range(9):
-                        if ((j == col) or (j == colpair)):
-                            continue
-                        self.at(row, j).candidates.difference_update(candPair)
+                    while (len(candPair) > 0):
+                        dig = candPair.pop()
+                        stepReducedCands = self.updateCandsInRow(row, [col, colpair], dig)
+                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same col
             r = idx
             if (r != row):
                 if (self.at(r, col).candidates == candPair):
                     rowpair = r
+                stepReducedCands = False
                 if (rowpair >= 0):
-                    for i in range(9):
-                        if ((i == row) or (i == rowpair)):
-                            continue
-                        self.at(i, col).candidates.difference_update(candPair)
+                    while (len(candPair) > 0):
+                        dig = candPair.pop()
+                        stepReducedCands = self.updateCandsInCol(col, [row, rowpair], dig)
+                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same block
             blkIdx = idx
+            blk = self.at(row, col).blk
             rowstart = self.at(row, col).rowBlkPos
             colstart = self.at(row, col).colBlkPos
             r = rowstart + (blkIdx // 3)
@@ -263,12 +305,12 @@ class SudokuBoard:
                 if (self.at(r, c).candidates == candPair):
                     rowpair = r
                     colpair = c
+                stepReducedCands = False
                 if (rowpair >= 0 and colpair >= 0):
-                    for i in range(rowstart, rowstart + 3):
-                        for j in range(colstart, colstart + 3):
-                            if ((i == row and j == col) or (i == rowpair and j == colpair)):
-                                continue
-                            self.at(i, j).candidates.difference_update(candPair)
+                    while (len(candPair) > 0):
+                        dig = candPair.pop()
+                        stepReducedCands = self.updateCandsInBlock(blk, [self.at(row, col).blkidx, self.at(rowpair, colpair).blkidx], dig)
+                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
         return False
     
@@ -290,6 +332,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(row, c).candidates = t.copy()
+                    self.solvingSteps.append([row, col, "Hidden Pair", True])
                     return True
             #search for a pair along col
             r = idx
@@ -305,6 +348,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(r, col).candidates = t.copy()
+                    self.solvingSteps.append([row, col, "Hidden Pair", True])
                     return True
             #search the pair within block
             blkIdx = idx
@@ -325,6 +369,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(r, c).candidates = t.copy()
+                    self.solvingSteps.append([row, col, "Hidden Pair", True])
                     return True
         return False
     
@@ -340,11 +385,12 @@ class SudokuBoard:
                     u = self.at(row, col).candidates
                     u = u.union(self.at(row, c0).candidates)
                     u = u.union(self.at(row, c1).candidates)
+                    stepReducedCands = False
                     if (len(u) == 3):
-                        for j in range(9):
-                            if ((j == col) or (j == c0) or (j == c1)):
-                                continue
-                            self.at(row, j).candidates.difference_update(u)
+                        while (len(u) > 0):
+                            dig = u.pop()
+                            stepReducedCands = self.updateCandsInRow(row, [col, c0, c1], dig)
+                        self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
                         return True
                 #if cell(row, col) can basically be a naked triple, look for the other part in same col
                 r0 = idx0
@@ -353,11 +399,12 @@ class SudokuBoard:
                     u = self.at(row, col).candidates
                     u = u.union(self.at(r0, col).candidates)
                     u = u.union(self.at(r1, col).candidates)
+                    stepReducedCands = False
                     if (len(u) == 3):
-                        for i in range(9):
-                            if ((i == row) or (i == r0) or (i == r1)):
-                                continue
-                            self.at(i, col).candidates.difference_update(u)
+                        while (len(u) > 0):
+                            dig = u.pop()
+                            stepReducedCands = self.updateCandsInCol(col, [row, r0, r1], dig)
+                        self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
                         return True
         return False
     
@@ -382,12 +429,12 @@ class SudokuBoard:
                         allOtherCands = allOtherCands.union(self.at(row, j).candidates)
                         allOtherCands = allOtherCands.union(self.at(r, j).candidates)
                 tt = t.difference(allOtherCands)
+                stepReducedCands = False
                 if (len(tt) == 1):
                     dig = tt.pop()
-                    for i in range(9):
-                        if (i != row and i != r):
-                            self.at(i, col).candidates.discard(dig)
-                            self.at(i, c).candidates.discard(dig)
+                    stepReducedCands = self.updateCandsInCol(col, [row, r], dig)
+                    stepReducedCands = self.updateCandsInCol(c, [row, r], dig)
+                    self.solvingSteps.append([row, col, "X-Wing", stepReducedCands])
                     return True
                 #check conditions for x-wing row-wise
                 allOtherCands = set()
@@ -396,12 +443,12 @@ class SudokuBoard:
                         allOtherCands = allOtherCands.union(self.at(i, col).candidates)
                         allOtherCands = allOtherCands.union(self.at(i, c).candidates)
                 tt = t.difference(allOtherCands)
+                stepReducedCands = False
                 if (len(tt) == 1):
                     dig = tt.pop()
-                    for j in range(9):
-                        if (j != col and j != c):
-                            self.at(row, j).candidates.discard(dig)
-                            self.at(r, j).candidates.discard(dig)
+                    stepReducedCands = self.updateCandsInRow(row, [col, c], dig)
+                    stepReducedCands = self.updateCandsInRow(r, [col, c], dig)
+                    self.solvingSteps.append([row, col, "X-Wing", stepReducedCands])
                     return True
         return False
     
@@ -418,13 +465,12 @@ class SudokuBoard:
                     continue
                 allOtherCands = allOtherCands.union(self.at(i, j).candidates)
         lockedCands = self.at(row, col).candidates.difference(allOtherCands)
+        stepReducedCands = False
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                for j in range(9):
-                    if ((j >= colstart) and (j < colstart + 3)):
-                        continue
-                    self.at(row, j).candidates.discard(dig)
+                stepReducedCands = self.updateCandsInRow(row, [colstart, colstart + 1, colstart + 2], dig)
+            self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
             return True
         #check if current cand list has unique elements within all other block cols
         allOtherCands = set()
@@ -434,13 +480,12 @@ class SudokuBoard:
                     continue
                 allOtherCands = allOtherCands.union(self.at(i, j).candidates)
         lockedCands = self.at(row, col).candidates.difference(allOtherCands)
+        stepReducedCands = False
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                for i in range(9):
-                    if ((i >= rowstart) and (i < rowstart + 3)):
-                        continue
-                    self.at(i, col).candidates.discard(dig)
+                stepReducedCands = self.updateCandsInCol(col, [rowstart, rowstart + 1, rowstart + 2], dig)
+            self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
             return True
         return False
     
@@ -451,13 +496,10 @@ class SudokuBoard:
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForNakedSingle(row, col):
-                    self.solvingSteps.append("({}, {}): Naked Single".format(row, col))
                     continue
                 if self.checkCellForNakedPair(row, col):
-                    self.solvingSteps.append("({}, {}): Naked Pair".format(row, col))
                     continue
                 if self.checkCellForNakedTriplet(row, col):
-                    self.solvingSteps.append("({}, {}): Naked Triplet".format(row, col))
                     continue
 
     def searchForHiddenTuples(self):
@@ -467,10 +509,8 @@ class SudokuBoard:
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForHiddenSingle(row, col):
-                    self.solvingSteps.append("({}, {}): Hidden Single".format(row, col))
                     continue
                 if self.checkCellForHiddenPair(row, col):
-                    self.solvingSteps.append("({}, {}): Hidden Pair".format(row, col))
                     continue
 
     def searchForLockedBlockCandsAndWings(self):
@@ -480,10 +520,8 @@ class SudokuBoard:
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForLockedCandsInBlocks(row, col):
-                    self.solvingSteps.append("({}, {}): Locked Cands".format(row, col))
                     continue
                 if self.checkCellForXWing(row, col):
-                    self.solvingSteps.append("({}, {}): X-Wing".format(row, col))
                     continue
     
     def solve(self, numIterations = 0):
@@ -503,7 +541,7 @@ class SudokuBoard:
 
 
 sb = SudokuBoard(testboard3)
-sb.updateCands()
+sb.collectCands()
 #Do we need printings from cand lists?
 testprintings = False
 if (testprintings):
@@ -530,4 +568,4 @@ if (testprintings):
 else:
     sb.solve()
     sb.print()
-    sb.printSolvingSteps()
+    sb.printSolvingSteps(printFullSteps = False)
