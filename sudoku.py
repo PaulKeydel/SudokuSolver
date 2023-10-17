@@ -489,7 +489,7 @@ class SudokuBoard:
             return True
         return False
     
-    def searchForNakedTuples(self):
+    def applyStrategies(self):
         for row in range(9):
             for col in range(9):
                 if (self.at(row, col).isGap() == False):
@@ -499,27 +499,18 @@ class SudokuBoard:
                     continue
                 if self.checkCellForNakedPair(row, col):
                     continue
-                if self.checkCellForNakedTriplet(row, col):
-                    continue
-
-    def searchForHiddenTuples(self):
-        for row in range(9):
-            for col in range(9):
-                if (self.at(row, col).isGap() == False):
-                    assert(self.at(row, col).lc() == 0)
-                    continue
                 if self.checkCellForHiddenSingle(row, col):
                     continue
                 if self.checkCellForHiddenPair(row, col):
                     continue
-
-    def searchForLockedBlockCandsAndWings(self):
         for row in range(9):
             for col in range(9):
                 if (self.at(row, col).isGap() == False):
                     assert(self.at(row, col).lc() == 0)
                     continue
                 if self.checkCellForLockedCandsInBlocks(row, col):
+                    continue
+                if self.checkCellForNakedTriplet(row, col):
                     continue
                 if self.checkCellForXWing(row, col):
                     continue
@@ -528,15 +519,11 @@ class SudokuBoard:
         if (numIterations == 0):
             valid = False
             while not valid:
-                self.searchForNakedTuples()
-                self.searchForHiddenTuples()
-                self.searchForLockedBlockCandsAndWings()
+                self.applyStrategies()
                 valid = self.valid()
         else:
             for i in range(numIterations):
-                self.searchForNakedTuples()
-                self.searchForHiddenTuples()
-                self.searchForLockedBlockCandsAndWings()
+                self.applyStrategies()
     
 
 
