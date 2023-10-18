@@ -59,6 +59,9 @@ class Cell:
         #set for storing candidates
         self.candidates = set()
     
+    def __str__(self) -> str:
+        return "Cell(" + str(self.row) + ", " + str(self.col) + "): " + str([self.val, self.candidates])
+    
     def isEq(self, dig) -> bool:
         return (self.val == dig)
     
@@ -532,26 +535,15 @@ sb.collectCands()
 #Do we need printings from cand lists?
 testprintings = False
 if (testprintings):
-    #cell[9 * 1 + 1]: hidden single
-    #cell[9 * 4 + 4]: naked single
-    #cell[9 * 6 + 8] and cell[9 * 8 + 8]: hidden pair (5, 7)
-    #cell[9 * 6 + 8] and cell[9 * 8 + 8]: naked pair (5, 7), check this with cell[9 * 0 + 8]
-    #cell[9 * 5 + 0], cell[9 * 5 + 1] and cell[9 * 5 + 2]: naked triplet (4, 8, 9), check this with cell[9 * 5 + 5]
     ####
     sb.solve(numIterations = 2)
     ####
-    print("Digit and Cands of cell(1, 1):")
-    print([sb.at(1, 1).val, sb.at(1, 1).candidates])
-    print("Digit and Cands of cell(4, 4):")
-    print([sb.at(4, 4).val, sb.at(4, 4).candidates])
-    print("Digit and Cands of cell(6, 8):")
-    print([sb.at(6, 8).val, sb.at(6, 8).candidates])
-    print("Digit and Cands of cell(8, 8):")
-    print([sb.at(8, 8).val, sb.at(8, 8).candidates])
-    print("Digit and Cands of cell(0, 8):")
-    print([sb.at(0, 8).val, sb.at(0, 8).candidates])
-    print("Digit and Cands of cell(5, 5):")
-    print([sb.at(5, 5).val, sb.at(5, 5).candidates])
+    print(sb.at(1, 1))
+    print(sb.at(4, 4))
+    print(sb.at(6, 8))
+    print(sb.at(8, 8))
+    print(sb.at(0, 8))
+    print(sb.at(5, 5))
 else:
     sb.solve()
     sb.print()

@@ -1,5 +1,5 @@
 # SudokuSolver
-This Python code can solve Sudokus by applying human strategies. Five logical strategies are implemented:
+This Python code can solve Sudokus by applying human strategies. 7 logical strategies are implemented:
 * Hidden singles
 * Naked singles
 * Hidden pairs
