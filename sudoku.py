@@ -117,19 +117,10 @@ class SudokuBoard:
             i = i + 1
         return found
 
-    def isPresent(self, row, col, digit):
-        block = 3 * (row // 3) + (col // 3)
-        return (self.isInRow(row, digit) or self.isInCol(col, digit) or self.isInBlock(block, digit))
-
-    def isComplete(self):
-        for i in range(81):
-            if self.b[i].val == 0:
-                return False
-        return True
-
     def valid(self):
-        if self.isComplete() == False:
-            return False
+        for i in range(81):
+            if self.b[i].isGap():
+                return False
         exist = True
         for dig in range(1, 10):
             for i_ in range(9):
@@ -155,8 +146,11 @@ class SudokuBoard:
         for idx in range(81):
             if not self.b[idx].isGap():
                 continue
+            row = self.b[idx].row
+            col = self.b[idx].col
+            blk = self.b[idx].blk
             for dig in range(1, 10):
-                if not self.isPresent(idx // 9, idx % 9, dig):
+                if not(self.isInRow(row, dig) or self.isInCol(col, dig) or self.isInBlock(blk, dig)):
                     self.b[idx].candidates.add(dig)
     
     def updateCandsFromSolvedCell(self, row, col):
