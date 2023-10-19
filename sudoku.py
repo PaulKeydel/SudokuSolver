@@ -276,7 +276,7 @@ class SudokuBoard:
                 if (colpair >= 0):
                     while (len(candPair) > 0):
                         dig = candPair.pop()
-                        stepReducedCands = self.updateCandsInRow(row, [col, colpair], dig)
+                        stepReducedCands |= self.updateCandsInRow(row, [col, colpair], dig)
                     self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same col
@@ -288,7 +288,7 @@ class SudokuBoard:
                 if (rowpair >= 0):
                     while (len(candPair) > 0):
                         dig = candPair.pop()
-                        stepReducedCands = self.updateCandsInCol(col, [row, rowpair], dig)
+                        stepReducedCands |= self.updateCandsInCol(col, [row, rowpair], dig)
                     self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same block
@@ -306,7 +306,7 @@ class SudokuBoard:
                 if (rowpair >= 0 and colpair >= 0):
                     while (len(candPair) > 0):
                         dig = candPair.pop()
-                        stepReducedCands = self.updateCandsInBlock(blk, [self.at(row, col).blkidx, self.at(rowpair, colpair).blkidx], dig)
+                        stepReducedCands |= self.updateCandsInBlock(blk, [self.at(row, col).blkidx, self.at(rowpair, colpair).blkidx], dig)
                     self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
                     return True
         return False
@@ -386,7 +386,7 @@ class SudokuBoard:
                     if (len(u) == 3):
                         while (len(u) > 0):
                             dig = u.pop()
-                            stepReducedCands = self.updateCandsInRow(row, [col, c0, c1], dig)
+                            stepReducedCands |= self.updateCandsInRow(row, [col, c0, c1], dig)
                         self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
                         return True
                 #if cell(row, col) can basically be a naked triple, look for the other part in same col
@@ -400,7 +400,7 @@ class SudokuBoard:
                     if (len(u) == 3):
                         while (len(u) > 0):
                             dig = u.pop()
-                            stepReducedCands = self.updateCandsInCol(col, [row, r0, r1], dig)
+                            stepReducedCands |= self.updateCandsInCol(col, [row, r0, r1], dig)
                         self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
                         return True
         return False
@@ -429,8 +429,8 @@ class SudokuBoard:
                 stepReducedCands = False
                 if (len(tt) == 1):
                     dig = tt.pop()
-                    stepReducedCands = self.updateCandsInCol(col, [row, r], dig)
-                    stepReducedCands = self.updateCandsInCol(c, [row, r], dig)
+                    stepReducedCands |= self.updateCandsInCol(col, [row, r], dig)
+                    stepReducedCands |= self.updateCandsInCol(c, [row, r], dig)
                     self.solvingSteps.append([row, col, "X-Wing", stepReducedCands])
                     return True
                 #check conditions for x-wing row-wise
@@ -443,8 +443,8 @@ class SudokuBoard:
                 stepReducedCands = False
                 if (len(tt) == 1):
                     dig = tt.pop()
-                    stepReducedCands = self.updateCandsInRow(row, [col, c], dig)
-                    stepReducedCands = self.updateCandsInRow(r, [col, c], dig)
+                    stepReducedCands |= self.updateCandsInRow(row, [col, c], dig)
+                    stepReducedCands |= self.updateCandsInRow(r, [col, c], dig)
                     self.solvingSteps.append([row, col, "X-Wing", stepReducedCands])
                     return True
         return False
@@ -466,7 +466,7 @@ class SudokuBoard:
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                stepReducedCands = self.updateCandsInRow(row, [colstart, colstart + 1, colstart + 2], dig)
+                stepReducedCands |= self.updateCandsInRow(row, [colstart, colstart + 1, colstart + 2], dig)
             self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
             return True
         #check if current cand list has unique elements within all other block cols
@@ -481,7 +481,7 @@ class SudokuBoard:
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                stepReducedCands = self.updateCandsInCol(col, [rowstart, rowstart + 1, rowstart + 2], dig)
+                stepReducedCands |= self.updateCandsInCol(col, [rowstart, rowstart + 1, rowstart + 2], dig)
             self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
             return True
         return False
