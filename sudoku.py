@@ -277,7 +277,7 @@ class SudokuBoard:
                     while (len(candPair) > 0):
                         dig = candPair.pop()
                         stepReducedCands |= self.updateCandsInRow(row, [col, colpair], dig)
-                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
+                    self.solvingSteps.append([row, col, "Naked Pair with cell" + str([row, colpair]), stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same col
             r = idx
@@ -289,7 +289,7 @@ class SudokuBoard:
                     while (len(candPair) > 0):
                         dig = candPair.pop()
                         stepReducedCands |= self.updateCandsInCol(col, [row, rowpair], dig)
-                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
+                    self.solvingSteps.append([row, col, "Naked Pair with cell" + str([rowpair, col]), stepReducedCands])
                     return True
             #if cell(row, col) can basically be a naked pair, look for the other part in same block
             blkIdx = idx
@@ -307,7 +307,7 @@ class SudokuBoard:
                     while (len(candPair) > 0):
                         dig = candPair.pop()
                         stepReducedCands |= self.updateCandsInBlock(blk, [self.at(row, col).blkidx, self.at(rowpair, colpair).blkidx], dig)
-                    self.solvingSteps.append([row, col, "Naked Pair", stepReducedCands])
+                    self.solvingSteps.append([row, col, "Naked Pair with cell" + str([rowpair, colpair]), stepReducedCands])
                     return True
         return False
     
@@ -329,7 +329,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(row, c).candidates = t.copy()
-                    self.solvingSteps.append([row, col, "Hidden Pair", True])
+                    self.solvingSteps.append([row, col, "Hidden Pair " + str(t) + " with cell" + str([row, c]), True])
                     return True
             #search for a pair along col
             r = idx
@@ -345,7 +345,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(r, col).candidates = t.copy()
-                    self.solvingSteps.append([row, col, "Hidden Pair", True])
+                    self.solvingSteps.append([row, col, "Hidden Pair " + str(t) + " with cell" + str([r, col]), True])
                     return True
             #search the pair within block
             blkIdx = idx
@@ -366,7 +366,7 @@ class SudokuBoard:
                 if (len(t) == 2):
                     self.at(row, col).candidates = t.copy()
                     self.at(r, c).candidates = t.copy()
-                    self.solvingSteps.append([row, col, "Hidden Pair", True])
+                    self.solvingSteps.append([row, col, "Hidden Pair " + str(t) + " with cell" + str([r, c]), True])
                     return True
         return False
     
@@ -387,7 +387,7 @@ class SudokuBoard:
                         while (len(u) > 0):
                             dig = u.pop()
                             stepReducedCands |= self.updateCandsInRow(row, [col, c0, c1], dig)
-                        self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
+                        self.solvingSteps.append([row, col, "Naked Triplet with cell" + str([row, c0]) + " and cell" + str([row, c1]), stepReducedCands])
                         return True
                 #if cell(row, col) can basically be a naked triple, look for the other part in same col
                 r0 = idx0
@@ -401,7 +401,7 @@ class SudokuBoard:
                         while (len(u) > 0):
                             dig = u.pop()
                             stepReducedCands |= self.updateCandsInCol(col, [row, r0, r1], dig)
-                        self.solvingSteps.append([row, col, "Naked Triplet", stepReducedCands])
+                        self.solvingSteps.append([row, col, "Naked Triplet with cell" + str([r0, col]) + " and cell" + str([r1, col]), stepReducedCands])
                         return True
         return False
     
@@ -466,8 +466,8 @@ class SudokuBoard:
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                stepReducedCands |= self.updateCandsInRow(row, [colstart, colstart + 1, colstart + 2], dig)
-            self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
+                stepReducedCands = self.updateCandsInRow(row, [colstart, colstart + 1, colstart + 2], dig)
+                self.solvingSteps.append([row, col, "Cand " + str(dig) + " is locked in row", stepReducedCands])
             return True
         #check if current cand list has unique elements within all other block cols
         allOtherCands = set()
@@ -481,8 +481,8 @@ class SudokuBoard:
         if (len(lockedCands) > 0):
             while(len(lockedCands) > 0):
                 dig = lockedCands.pop()
-                stepReducedCands |= self.updateCandsInCol(col, [rowstart, rowstart + 1, rowstart + 2], dig)
-            self.solvingSteps.append([row, col, "Locked Cands", stepReducedCands])
+                stepReducedCands = self.updateCandsInCol(col, [rowstart, rowstart + 1, rowstart + 2], dig)
+                self.solvingSteps.append([row, col, "Cand " + str(dig) + " is locked in col", stepReducedCands])
             return True
         return False
     
@@ -494,20 +494,24 @@ class SudokuBoard:
                     continue
                 if self.checkCellForNakedSingle(row, col):
                     continue
-                if self.checkCellForNakedPair(row, col):
-                    continue
                 if self.checkCellForHiddenSingle(row, col):
                     continue
+                if self.checkCellForNakedPair(row, col):
+                    continue
                 if self.checkCellForHiddenPair(row, col):
+                    continue
+                if self.checkCellForNakedTriplet(row, col):
                     continue
         for row in range(9):
             for col in range(9):
                 if (self.at(row, col).isGap() == False):
                     assert(self.at(row, col).lc() == 0)
                     continue
-                if self.checkCellForLockedCandsInBlocks(row, col):
+                if self.checkCellForNakedSingle(row, col):
                     continue
-                if self.checkCellForNakedTriplet(row, col):
+                if self.checkCellForHiddenSingle(row, col):
+                    continue
+                if self.checkCellForLockedCandsInBlocks(row, col):
                     continue
                 if self.checkCellForXWing(row, col):
                     continue
