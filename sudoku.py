@@ -1,3 +1,6 @@
+import csv
+import sys
+
 #define boards to test
 #cell[9 * 1 + 1]: hidden single
 #cell[9 * 4 + 4]: naked single
@@ -17,32 +20,7 @@ testboard1 = [
     [7, 0, 0,   2, 3, 5,   0, 0, 0],
     [0, 0, 0,   0, 0, 0,   3, 2, 0]
     ]
-testboard2 = [
-    [8, 4, 0,   6, 5, 0,   0, 2, 0],
-    [0, 0, 3,   0, 0, 0,   0, 0, 0],
-    [0, 2, 0,   0, 0, 7,   0, 0, 0],
 
-    [0, 0, 0,   0, 1, 0,   0, 6, 0],
-    [0, 0, 0,   0, 6, 0,   0, 0, 8],
-    [9, 0, 6,   0, 0, 4,   0, 0, 1],
-
-    [0, 5, 0,   3, 7, 0,   0, 8, 0],
-    [0, 0, 0,   8, 0, 0,   3, 0, 7],
-    [0, 0, 0,   0, 0, 9,   4, 0, 0]
-    ]
-testboard3 = [
-    [0, 0, 5,   6, 3, 9,   0, 0, 0],
-    [0, 7, 3,   0, 0, 0,   0, 0, 4],
-    [0, 0, 0,   0, 0, 0,   0, 0, 0],
-
-    [1, 0, 6,   9, 0, 5,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   0, 6, 0],
-    [0, 9, 0,   0, 8, 0,   0, 7, 0],
-
-    [8, 6, 9,   1, 0, 0,   2, 0, 3],
-    [0, 1, 0,   0, 0, 2,   0, 0, 0],
-    [0, 0, 0,   0, 0, 0,   8, 0, 0]
-    ]
 
 class Cell:
     def __init__(self, idx: int, digit: int):
@@ -525,10 +503,28 @@ class SudokuBoard:
         else:
             for i in range(numIterations):
                 self.applyStrategies()
-    
 
 
-sb = SudokuBoard(testboard3)
+def readBoardFromFile(filename: str) -> list:
+    board = list()
+    with open(filename, newline='') as boardfile:
+        boardreader = csv.reader(boardfile, delimiter=' ')
+        for row in boardreader:
+            assert(len(row) == 9)
+            board.append([int(row[i]) for i in range(9)])
+        assert(len(board) == 9)
+    return board
+
+
+#handle command line arguments and load board array
+assert(len(sys.argv) < 3)
+testboard = list()
+if (len(sys.argv) == 2):
+    testboard = readBoardFromFile(sys.argv[1])
+else:
+    testboard = readBoardFromFile("testboard1.txt")
+#create SudokuBoard
+sb = SudokuBoard(testboard)
 sb.collectCands()
 #Do we need printings from cand lists?
 testprintings = False
