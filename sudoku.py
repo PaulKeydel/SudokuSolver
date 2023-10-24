@@ -1,5 +1,6 @@
 import csv
 import sys
+from tkinter import *
 
 #define boards to test
 #cell[9 * 1 + 1]: hidden single
@@ -515,6 +516,30 @@ def readBoardFromFile(filename: str) -> list:
         assert(len(board) == 9)
     return board
 
+def getBoardFromInputGUI() -> list:
+    master = Tk()
+    master.geometry("505x550")
+    Label(master, text="Fill in your quiz and click 'Solve' to continue in terminal").place(x = 40, y = 10)
+    entries = [Entry(master) for _ in range(81)]
+    for row in range(9):
+        for col in range(9):
+            y_ = row * 45 + (row // 3) * 15 + 40
+            x_ = col * 45 + (col // 3) * 15 + 40
+            entries[9 * row + col].place(x = x_, y = y_, width = 35, height = 35)
+    board = list()
+    def saveBoardAndContinue():
+        for row in range(9):
+            rowlist = []
+            for col in range(9):
+                dig = int(entries[9 * row + col].get()) if entries[9 * row + col].get() != "" else 0
+                assert(dig >= 0 and dig <= 9)
+                rowlist.append(dig)
+            board.append(rowlist)
+        master.quit()
+    Button(master, text='Solve', command=saveBoardAndContinue).place(x = 40, y = 490, width = 425)
+    mainloop( )
+    return board
+
 
 #handle command line arguments and load board array
 assert(len(sys.argv) < 3)
@@ -522,7 +547,7 @@ testboard = list()
 if (len(sys.argv) == 2):
     testboard = readBoardFromFile(sys.argv[1])
 else:
-    testboard = readBoardFromFile("testboard1.txt")
+    testboard = getBoardFromInputGUI()
 #create SudokuBoard
 sb = SudokuBoard(testboard)
 sb.collectCands()
