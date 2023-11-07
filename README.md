@@ -3,7 +3,7 @@ This Python code can solve Sudokus by applying human strategies.
 
 **Usage:** python3 sudoku.py $<$ file with board $>$
 
-If no file is provided, a simple GUI will be displayed to enter the quiz.
+If no file is provided, a simple text-based user interface will be displayed to enter the quiz.
 
 7 logical strategies are implemented:
 * Hidden singles
