@@ -1,6 +1,6 @@
 import csv
 import sys
-from tkinter import *
+import curses
 
 #define boards to test
 #cell[9 * 1 + 1]: hidden single
@@ -516,28 +516,57 @@ def readBoardFromFile(filename: str) -> list:
         assert(len(board) == 9)
     return board
 
-def getBoardFromInputGUI() -> list:
-    master = Tk()
-    master.geometry("505x550")
-    Label(master, text="Fill in your quiz and click 'Solve' to continue in terminal").place(x = 40, y = 10)
-    entries = [Entry(master) for _ in range(81)]
-    for row in range(9):
-        for col in range(9):
-            y_ = row * 45 + (row // 3) * 15 + 40
-            x_ = col * 45 + (col // 3) * 15 + 40
-            entries[9 * row + col].place(x = x_, y = y_, width = 35, height = 35)
+def getBoardFromStdin() -> list:
     board = list()
-    def saveBoardAndContinue():
-        for row in range(9):
-            rowlist = []
-            for col in range(9):
-                dig = int(entries[9 * row + col].get()) if entries[9 * row + col].get() != "" else 0
-                assert(dig >= 0 and dig <= 9)
-                rowlist.append(dig)
-            board.append(rowlist)
-        master.quit()
-    Button(master, text='Solve', command=saveBoardAndContinue).place(x = 40, y = 490, width = 425)
-    mainloop( )
+    stdscr = curses.initscr()
+    stdscr.clear()
+    stdscr.addstr("Please type in your Sudoku quiz, row by row!\n")
+    stdscr.addstr("* use 0 for empty cells\n")
+    stdscr.addstr("* type 'c' to correct the last entry\n")
+    stdscr.move(4, 0)
+    for i in range(9):
+        stdscr.addstr("     ┆┆     ┆┆\n")
+        if (i == 2 or i == 5):
+            stdscr.addstr("===================\n")
+    stdscr.move(4, 0)
+    stdscr.refresh()
+    curses.noecho()
+    stdscr.nodelay(False)
+    lasty = []
+    lastx = []
+    while (len(board) < 81):
+        row = len(board) // 9
+        col = len(board) % 9
+        c = stdscr.getch()
+        if (c >= 48 and c <= 57):
+            # append digit and current pos to the lists
+            board.append(c - 48)
+            lasty.append(stdscr.getyx()[0])
+            lastx.append(stdscr.getyx()[1])
+            #print the input
+            if (c > 48):
+                stdscr.addstr(str(c - 48))
+            # move curser to next position
+            if (col != 8):
+                ypos = 4 + row
+                ypos += ((row > 2) + (row > 5))
+                xpos = 2 * (col + 1)
+                xpos += ((col >= 2) + (col >= 5))
+            else:
+                xpos = 0
+                ypos = 5 + row
+                ypos += ((row >= 2) + (row >= 5))
+            stdscr.move(ypos, xpos)
+        elif ((c == ord('c')) and (len(board) > 0)):
+            board.pop()
+            ly = lasty.pop()
+            lx = lastx.pop()
+            stdscr.move(ly, lx)
+            stdscr.addstr(" ")
+            stdscr.move(ly, lx)
+        stdscr.refresh()
+    curses.endwin()
+    board = [board[i:i + 9] for i in range(0, 81, 9)]
     return board
 
 
@@ -547,7 +576,7 @@ testboard = list()
 if (len(sys.argv) == 2):
     testboard = readBoardFromFile(sys.argv[1])
 else:
-    testboard = getBoardFromInputGUI()
+    testboard = getBoardFromStdin()
 #create SudokuBoard
 sb = SudokuBoard(testboard)
 sb.collectCands()
