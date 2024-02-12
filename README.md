@@ -5,7 +5,7 @@ This Python code can solve Sudokus by applying human strategies.
 
 If no file is provided, a simple text-based user interface will be displayed to enter the quiz.
 
-7 logical strategies are implemented:
+8 logical strategies are implemented:
 * Hidden singles
 * Naked singles
 * Hidden pairs
@@ -13,5 +13,6 @@ If no file is provided, a simple text-based user interface will be displayed to 
 * Naked triplets
 * Locked candidates in blocks
 * X-Wings
+* Colored pairs
 
 For further descriptions see https://www.sudoku9x9.com/sudoku_solving_techniques.php

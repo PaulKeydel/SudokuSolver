@@ -490,7 +490,11 @@ class SudokuBoard:
                         #print([row1, col1], [r, c], [candPair, self.at(row1, c).candidates])
                         assert(self.at(r, col1).pairColor == None)
                         assert(self.at(row1, c).pairColor == None)
+                        couldReduce = any(x in self.at(r, col1).candidates for x in candPair)
+                        self.solvingSteps.append([r, col1, "Cand pair " + str(candPair) + " removed due to colored pair", couldReduce])
                         self.at(r, col1).candidates.difference_update(candPair)
+                        couldReduce = any(x in self.at(row1, c).candidates for x in candPair)
+                        self.solvingSteps.append([row1, c, "Cand pair " + str(candPair) + " removed due to colored pair", couldReduce])
                         self.at(row1, c).candidates.difference_update(candPair)
         #do the recursive coloring process, build a three way recursion and loop over cols, rows and blocks
         currCell = self.at(row, col)
@@ -499,17 +503,17 @@ class SudokuBoard:
         nextColor = ~color & 1
         for idx in range(9):
             nextCell = self.at(currCell.row, idx)
-            if (nextCell.pairColor == None and nextCell.blk != currCell.blk and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
-                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
-                #break
+            if (nextCell.pairColor == None and nextCell.blk != currCell.blk):
+                if (nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                    self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
             nextCell = self.at(idx, currCell.col)
-            if (nextCell.pairColor == None and nextCell.blk != currCell.blk and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
-                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
-                #break
+            if (nextCell.pairColor == None and nextCell.blk != currCell.blk):
+                if (nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                    self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
             nextCell = self.atBlock(currCell.blk, idx)
-            if (nextCell.pairColor == None and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
-                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
-                #break
+            if (nextCell.pairColor == None):
+                if (nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                    self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
             
     def applyStrategies(self):
         for row in range(9):
