@@ -37,6 +37,8 @@ class Cell:
         self.colBlkPos = 3 * (self.col // 3)
         #set for storing candidates
         self.candidates = set()
+        #color for color pair algorithm
+        self.pairColor = None
     
     def __str__(self) -> str:
         return "Cell(" + str(self.row) + ", " + str(self.col) + "): " + str([self.val, self.candidates])
@@ -465,6 +467,50 @@ class SudokuBoard:
             return True
         return False
     
+    def checkForIntersectingColorPairs(self, row, col, row1 = -1, col1 = -1, color = 0):
+        if (self.at(row, col).lc() != 2):
+            return
+        assert(color == 0 or color == 1)
+        candPair = self.at(row, col).candidates
+        #reset field
+        if (row1 == -1 and col1 == -1):
+            for r in range(9):
+                for c in range(9):
+                    self.at(r, c).pairColor = None
+            self.at(row, col).pairColor = 0
+        #set color in current depth and update cand list
+        else:
+            self.at(row1, col1).pairColor = color
+            assert(self.at(row1, col1).lc() == 2)
+            #update cand list if we have an intersecting color pair
+            for r in range(9):
+                for c in range(9):
+                    if (r != row1 and c != col1 and self.at(r, c).pairColor == (~color & 1)):
+                        #print([row1, col1], [r, c], [candPair, self.at(r, col1).candidates])
+                        #print([row1, col1], [r, c], [candPair, self.at(row1, c).candidates])
+                        assert(self.at(r, col1).pairColor == None)
+                        assert(self.at(row1, c).pairColor == None)
+                        self.at(r, col1).candidates.difference_update(candPair)
+                        self.at(row1, c).candidates.difference_update(candPair)
+        #do the recursive coloring process, build a three way recursion and loop over cols, rows and blocks
+        currCell = self.at(row, col)
+        if (row1 != -1 and col1 != -1):
+            currCell = self.at(row1, col1)
+        nextColor = ~color & 1
+        for idx in range(9):
+            nextCell = self.at(currCell.row, idx)
+            if (nextCell.pairColor == None and nextCell.blk != currCell.blk and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
+                #break
+            nextCell = self.at(idx, currCell.col)
+            if (nextCell.pairColor == None and nextCell.blk != currCell.blk and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
+                #break
+            nextCell = self.atBlock(currCell.blk, idx)
+            if (nextCell.pairColor == None and nextCell.lc() == 2 and len(nextCell.candidates.intersection(candPair)) == 2):
+                self.checkForIntersectingColorPairs(row, col, nextCell.row, nextCell.col, nextColor)
+                #break
+            
     def applyStrategies(self):
         for row in range(9):
             for col in range(9):
@@ -476,8 +522,10 @@ class SudokuBoard:
                 if self.checkCellForHiddenSingle(row, col):
                     continue
                 if self.checkCellForNakedPair(row, col):
+                    self.checkForIntersectingColorPairs(row, col)
                     continue
                 if self.checkCellForHiddenPair(row, col):
+                    self.checkForIntersectingColorPairs(row, col)
                     continue
                 if self.checkCellForNakedTriplet(row, col):
                     continue
