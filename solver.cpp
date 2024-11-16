@@ -517,6 +517,147 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
     return false;
 }
 
+bool SudokuBoard::checkCellForXWing(int row, int col)
+{
+    if (!at(row, col).isGap())
+    {
+        return false;
+    }
+    set<int> allOtherCands, t, tt;
+    for (int r = row + 1; r < 9; r++)
+    {
+        for (int c = col + 1; c < 9; c++)
+        {
+            if (!(at(row, c).isGap() && at(r, col).isGap() && at(r, c).isGap())) continue;
+            t = at(row, col).candidates;
+            t = c_intersection(t, at(row, c).candidates);
+            t = c_intersection(t, at(r, col).candidates);
+            t = c_intersection(t, at(r, c).candidates);
+            //check if the x pattern has a common candidate
+            if (t.size() == 0) continue;
+            //check conditions for x-wing column-wise
+            allOtherCands.clear();
+            for (int j = 0; j < 9; j++)
+            {
+                if (j != col && j != c)
+                {
+                    allOtherCands.insert(at(row, j).candidates.begin(), at(row, j).candidates.end());
+                    allOtherCands.insert(at(r, j).candidates.begin(), at(r, j).candidates.end());
+                }
+            }
+            tt = c_difference(t, allOtherCands);
+            bool stepReducedCands = false;
+            if (tt.size() == 1)
+            {
+                stepReducedCands |= updateCandsInCol(col, vector<int>{row, r}, *tt.begin());
+                stepReducedCands |= updateCandsInCol(c, vector<int>{row, r}, *tt.begin());
+                appendSolvStep(row, col, "column-wise X-Wing with diag cell" + cord2str(r, c), stepReducedCands);
+                return true;
+            }
+            //check conditions for x-wing row-wise
+            allOtherCands.clear();
+            for (int i = 0; i < 9; i++)
+            {
+                if (i != row && i != r)
+                {
+                    allOtherCands.insert(at(i, col).candidates.begin(), at(i, col).candidates.end());
+                    allOtherCands.insert(at(i, c).candidates.begin(), at(i, c).candidates.end());
+                }
+            }
+            tt = c_difference(t, allOtherCands);
+            stepReducedCands = false;
+            if (tt.size() == 1)
+            {
+                stepReducedCands |= updateCandsInRow(row, vector<int>{col, c}, *tt.begin());
+                stepReducedCands |= updateCandsInRow(r, vector<int>{col, c}, *tt.begin());
+                appendSolvStep(row, col, "row-wise X-Wing with diag cell" + cord2str(r, c), stepReducedCands);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool SudokuBoard::checkCellForXYWing(int row, int col)
+{
+    if (at(row, col).lc() != 2)
+    {
+        return false;
+    }
+    int blk = at(row, col).blk;
+    int rowstart = at(row, col).rowBlkPos;
+    int colstart = at(row, col).colBlkPos;
+    set<int> t0, t1, t2;
+    //check if we have a xy pattern in row-column scenario
+    for (int r = row + 1; r < 9; r++)
+    {
+        for (int c = col + 1; c < 9; c++)
+        {
+            if (!(at(row, c).lc() == 2 && at(r, col).lc() == 2)) continue;
+            t0 = c_intersection(at(row, col).candidates, at(row, c).candidates);
+            t1 = c_intersection(at(row, col).candidates, at(r, col).candidates);
+            t2 = c_intersection(at(row, c).candidates, at(r, col).candidates);
+            if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
+            {
+                int lcbefore = at(r, c).lc();
+                at(r, c).candidates.erase(*t2.begin());
+                int lcafter = at(r, c).lc();
+                appendSolvStep(row, col, "XY wing", lcbefore > lcafter);
+                return true;
+            }
+        }
+    }
+    //check if we have a xy pattern in block-column scenario
+    for (int bi = 0; bi < 9; bi++)
+    {
+        if (at(blk, bi).row == row) continue;
+        for (int c = 0; c < 9; c++)
+        {
+            if ((c >= colstart) && (c < colstart + 3)) continue;
+            if (!(at(row, c).lc() == 2 && atBlock(blk, bi).lc() == 2)) continue;
+            t0 = c_intersection(at(row, col).candidates, at(row, c).candidates);
+            t1 = c_intersection(at(row, col).candidates, atBlock(blk, bi).candidates);
+            t2 = c_intersection(at(row, c).candidates, atBlock(blk, bi).candidates);
+            if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
+            {
+                int r1 = atBlock(blk, bi).row;
+                for (int c1 = at(row, c).colBlkPos; c1 < at(row, c).colBlkPos + 3; c1++)
+                {
+                    int lcbefore = at(r1, c1).lc();
+                    at(r1, c1).candidates.erase(*t2.begin());
+                    int lcafter = at(r1, c1).lc();
+                    appendSolvStep(row, col, "XY wing", lcbefore > lcafter);
+                }
+            }
+        }
+    }
+    //check if we have a xy pattern in block-row scenario
+    for (int bi = 0; bi < 9; bi++)
+    {
+        if (at(blk, bi).col == col) continue;
+        for (int r = 0; r < 9; r++)
+        {
+            if ((r >= rowstart) && (r < rowstart + 3)) continue;
+            if (!(at(r, col).lc() == 2 && atBlock(blk, bi).lc() == 2)) continue;
+            t0 = c_intersection(at(row, col).candidates, at(r, col).candidates);
+            t1 = c_intersection(at(row, col).candidates, atBlock(blk, bi).candidates);
+            t2 = c_intersection(at(r, col).candidates, atBlock(blk, bi).candidates);
+            if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
+            {
+                int c1 = atBlock(blk, bi).col;
+                for (int r1 = at(r, col).rowBlkPos; r1 < at(r, col).rowBlkPos + 3; r1++)
+                {
+                    int lcbefore = at(r1, c1).lc();
+                    at(r1, c1).candidates.erase(*t2.begin());
+                    int lcafter = at(r1, c1).lc();
+                    appendSolvStep(row, col, "XY wing", lcbefore > lcafter);
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
 {
     if (at(row, col).lc() < 2)
@@ -570,6 +711,81 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     return false;
 }
 
+void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int col1, int color)
+{
+    if (at(row, col).lc() != 2)
+    {
+        return;
+    }
+    assert(color == 0 || color == 1);
+    set<int> candPair = at(row, col).candidates;
+    //reset field
+    if (row1 == -1 && col1 == -1)
+    {
+        for (int r = 0; r < 9; r++)
+        {
+            for (int c = 0; c < 9; c++)
+            {
+                at(r, c).pairColor = -1;
+            }
+        }
+        at(row, col).pairColor = 0;
+    }
+    //set color in current depth and update cand list
+    else
+    {
+        at(row1, col1).pairColor = color;
+        assert(at(row1, col1).lc() == 2);
+        //update cand list if we have an intersecting color pair
+        for (int r = 0; r < 9; r++)
+        {
+            for (int c = 0; c < 9; c++)
+            {
+                if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
+                {
+                    assert(at(r, col1).pairColor == -1);
+                    assert(at(row1, c).pairColor == -1);
+                    int lcbefore = at(r, col1).lc();
+                    at(r, col1).candidates.erase(*candPair.begin());
+                    at(r, col1).candidates.erase(*candPair.end());
+                    int lcafter = at(r, col1).lc();
+                    appendSolvStep(r, col1, "Cand pair " + cand2str(candPair) + " removed due to colored pair", lcbefore > lcafter);
+                    lcbefore = at(row1, c).lc();
+                    at(row1, c).candidates.erase(*candPair.begin());
+                    at(row1, c).candidates.erase(*candPair.end());
+                    lcafter = at(row1, c).lc();
+                    appendSolvStep(row1, c, "Cand pair " + cand2str(candPair) + " removed due to colored pair", lcbefore > lcafter);
+                }
+            }
+        }
+    }
+    //do the recursive coloring process, build a three way recursion and loop over cols, rows and blocks
+    Cell* currCell = &at(row, col);
+    if (row1 != -1 && col1 != -1)
+    {
+        currCell = &at(row1, col1);
+    }
+    int nextColor = ~color & 1;
+    for (int idx = 0; idx < 9; idx++)
+    {
+        Cell* nextCell = &at(currCell->row, idx);
+        if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
+        {
+            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+        }
+        nextCell = &at(idx, currCell->col);
+        if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
+        {
+            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+        }
+        nextCell = &atBlock(currCell->blk, idx);
+        if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
+        {
+            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+        }
+    }
+}
+
 void SudokuBoard::applyStrategies()
 {
     for (int row = 0; row < 9; row++)
@@ -587,31 +803,11 @@ void SudokuBoard::applyStrategies()
             if (checkCellForHiddenPair(row, col)) continue;
             if (checkCellForNakedTriplet(row, col)) continue;
             if (checkCellForLockedCandsInBlocks(row, col)) continue;
+            if (checkCellForXWing(row, col)) continue;
+            if (checkCellForXYWing(row, col)) continue;
+            checkForIntersectingColorPairs(row, col);
         }
     }
-        /*
-                if self.checkCellForNakedPair(row, col):
-                    self.checkForIntersectingColorPairs(row, col)
-                    continue
-                if self.checkCellForHiddenPair(row, col):
-                    self.checkForIntersectingColorPairs(row, col)
-                    continue
-                if self.checkCellForNakedTriplet(row, col):
-                    continue
-        for row in range(9):
-            for col in range(9):
-                if (self.at(row, col).isGap() == False):
-                    assert(self.at(row, col).lc() == 0)
-                    continue
-                if self.checkCellForNakedSingle(row, col):
-                    continue
-                if self.checkCellForHiddenSingle(row, col):
-                    continue
-                if self.checkCellForLockedCandsInBlocks(row, col):
-                    continue
-                if self.checkCellForXWing(row, col):
-                    continue
-        */
 }
     
 void SudokuBoard::solve(int numIterations)

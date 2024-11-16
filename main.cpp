@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <cassert>
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
 #include "solver.h"
 
 int TestBoard1[81] =
@@ -91,16 +94,45 @@ void getBoardFromStdin(int* board)
     endwin();
 }
 
-int main()
+void getBoardFromFile(std::string fname, int* board)
+{
+    std::ifstream in(fname);
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    const std::string sbuf = buffer.str();
+    for (int i = 0; i < 81; i++)
+    {
+        board[i] = std::atoi(&sbuf.at(2 * i));
+    }
+}
+
+void saveBoardToFile(std::string fname, int* board)
+{
+    std::string sbuf = "";
+    for (int i = 0; i < 81; i++)
+    {
+        sbuf += std::to_string(board[i]);
+        sbuf += (i % 9 == 8) ? "\n" : " ";
+    }
+    std::ofstream out(fname);
+    out << sbuf;
+    out.close();
+}
+
+int main(int argc, char *argv[])
 {
     int board[81];
-#if 1
-    memcpy(board, TestBoard1, 81 * sizeof(int));
-#else
-    getBoardFromStdin(board);
-#endif
+    if (argc == 2)
+    {
+        getBoardFromFile(argv[1], board);
+    }
+    else
+    {
+        getBoardFromStdin(board);
+        saveBoardToFile("last.txt", board);
+    }
     SudokuBoard sb(board);
-    sb.solve(100);
+    sb.solve(1000);
     sb.print();
     sb.printSolvingSteps();
     return 0;

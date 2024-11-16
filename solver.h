@@ -62,7 +62,10 @@ public:
     bool checkCellForNakedPair(int row, int col);
     bool checkCellForHiddenPair(int row, int col);
     bool checkCellForNakedTriplet(int row, int col);
+    bool checkCellForXWing(int row, int col);
+    bool checkCellForXYWing(int row, int col);
     bool checkCellForLockedCandsInBlocks(int row, int col);
+    void checkForIntersectingColorPairs(int row, int col, int row1 = -1, int col1 = -1, int color = 0);
     void applyStrategies();
     void solve(int numIterations = INT_MAX);
 };
