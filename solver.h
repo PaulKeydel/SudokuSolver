@@ -20,6 +20,7 @@ struct Cell
     //methods
     Cell() {};
     Cell(int idx, int digit);
+    Cell& operator=(Cell&& T) = default;
     std::string getOutput();
     bool isEq(int dig) { return (this->val == dig); };
     bool isGap() { return (this->val == 0); };
@@ -32,9 +33,12 @@ class SudokuBoard
 {
 private:
     std::array<Cell, 81> b;
-    //operations between cand lists
-    std::set<int> c_difference(std::set<int>& i1, std::set<int>& i2);
-    std::set<int> c_intersection(std::set<int>& i1, std::set<int>& i2);
+    //take the difference
+    friend std::set<int> operator-(std::set<int>& op1, std::set<int>& op2);
+    //take the intersection
+    friend std::set<int> operator&&(std::set<int>& op1, std::set<int>& op2);
+    //take the union
+    friend std::set<int> operator||(std::set<int>& op1, std::set<int>& op2);
     //stuff for list of solving steps
     std::vector<std::pair<int, std::string>> solvingSteps;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);

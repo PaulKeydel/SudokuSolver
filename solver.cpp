@@ -25,22 +25,30 @@ SudokuBoard::SudokuBoard(int* board)
 {
     for (int i = 0; i < 81; i++)
     {
-        b.at(i) = Cell(i, board[i]);
+        b.at(i) = Cell(i, board[i]); //move assignment
     }
 }
 
-set<int> SudokuBoard::c_difference(set<int>& i1, set<int>& i2)
+set<int> operator-(set<int>& op1, set<int>& op2)
 {
     set<int> dummy;
-    set_difference(i1.begin(), i1.end(), i2.begin(), i2.end(), inserter(dummy, dummy.begin()));
+    set_difference(op1.begin(), op1.end(), op2.begin(), op2.end(), inserter(dummy, dummy.begin()));
     return dummy;
 }
 
-set<int> SudokuBoard::c_intersection(set<int>& i1, set<int>& i2)
+set<int> operator&&(set<int>& op1, set<int>& op2)
 {
     set<int> dummy;
-    set_intersection(i1.begin(), i1.end(), i2.begin(), i2.end(), inserter(dummy, dummy.begin()));
+    set_intersection(op1.begin(), op1.end(), op2.begin(), op2.end(), inserter(dummy, dummy.begin()));
     return dummy;
+}
+
+set<int> operator||(set<int>& op1, set<int>& op2)
+{
+    set<int> result;
+    result.insert(op1.begin(), op1.end());
+    result.insert(op2.begin(), op2.end());
+    return result;
 }
 
 void SudokuBoard::appendSolvStep(int row, int col, string text, bool bReducedCands)
@@ -276,9 +284,9 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     for (int c = 0; c < 9; c++)
     {
         if (c == col || !at(row, c).isGap()) continue;
-        allOtherCands.insert(at(row, c).candidates.begin(), at(row, c).candidates.end());
+        allOtherCands = allOtherCands || at(row, c).candidates;
     }
-    t = c_difference(at(row, col).candidates, allOtherCands);
+    t = at(row, col).candidates - allOtherCands;
     if (t.size() == 1)
     {
         at(row, col).candidates.clear();
@@ -292,9 +300,9 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     for (int r = 0; r < 9; r++)
     {
         if (r == row || !at(r, col).isGap()) continue;
-        allOtherCands.insert(at(r, col).candidates.begin(), at(r, col).candidates.end());
+        allOtherCands = allOtherCands || at(r, col).candidates;
     }
-    t = c_difference(at(row, col).candidates, allOtherCands);
+    t = at(row, col).candidates - allOtherCands;
     if (t.size() == 1)
     {
         at(row, col).candidates.clear();
@@ -312,10 +320,10 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
         for (int c = colstart; c < colstart + 3; c++)
         {
             if ((r == row && c == col) || !at(r, c).isGap()) continue;
-            allOtherCands.insert(at(r, c).candidates.begin(), at(r, c).candidates.end());
+            allOtherCands = allOtherCands || at(r, c).candidates;
         }
     }
-    t = c_difference(at(row, col).candidates, allOtherCands);
+    t = at(row, col).candidates - allOtherCands;
     if (t.size() == 1)
     {
         at(row, col).candidates.clear();
@@ -399,10 +407,10 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             for (int j = 0; j < 9; j++)
             {
                 if (j == col || j == c) continue;
-                allOtherCands.insert(at(row, j).candidates.begin(), at(row, j).candidates.end());
+                allOtherCands = allOtherCands || at(row, j).candidates;
             }
-            t = c_intersection(at(row, col).candidates, at(row, c).candidates);
-            t = c_difference(t, allOtherCands);
+            t = at(row, col).candidates && at(row, c).candidates;
+            t = t - allOtherCands;
             if (t.size() == 2)
             {
                 at(row, col).candidates = t;
@@ -420,10 +428,10 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             for (int i = 0; i < 9; i++)
             {
                 if (i == row || i == r) continue;
-                allOtherCands.insert(at(i, col).candidates.begin(), at(i, col).candidates.end());
+                allOtherCands = allOtherCands || at(i, col).candidates;
             }
-            t = c_intersection(at(row, col).candidates, at(r, col).candidates);
-            t = c_difference(t, allOtherCands);
+            t = at(row, col).candidates && at(r, col).candidates;
+            t = t - allOtherCands;
             if (t.size() == 2)
             {
                 at(row, col).candidates = t;
@@ -447,11 +455,11 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
                 for (int j = colstart; j < colstart + 3; j++)
                 {
                     if ((i == row && j == col) || (i == r && j == c)) continue;
-                    allOtherCands.insert(at(i, j).candidates.begin(), at(i, j).candidates.end());
+                    allOtherCands = allOtherCands || at(i, j).candidates;
                 }
             }
-            t = c_intersection(at(row, col).candidates, at(r, c).candidates);
-            t = c_difference(t, allOtherCands);
+            t = at(row, col).candidates && at(r, c).candidates;
+            t = t - allOtherCands;
             if (t.size() == 2)
             {
                 at(row, col).candidates = t;
@@ -480,8 +488,8 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
             if (c0 != col && c1 != col && c0 != c1 && (at(row, c0).lc() > 1) && (at(row, c1).lc() > 1))
             {
                 set<int> u = at(row, col).candidates;
-                u.insert(at(row, c0).candidates.begin(), at(row, c0).candidates.end());
-                u.insert(at(row, c1).candidates.begin(), at(row, c1).candidates.end());
+                u = u || at(row, c0).candidates;
+                u = u || at(row, c1).candidates;
                 bool stepReducedCands = false;
                 if (u.size() == 3)
                 {
@@ -499,8 +507,8 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
             if (r0 != row && r1 != row && r0 != r1 && (at(r0, col).lc() > 1) && (at(r1, col).lc() > 1))
             {
                 set<int> u = at(row, col).candidates;
-                u.insert(at(r0, col).candidates.begin(), at(r0, col).candidates.end());
-                u.insert(at(r1, col).candidates.begin(), at(r1, col).candidates.end());
+                u = u || at(r0, col).candidates;
+                u = u || at(r1, col).candidates;
                 bool stepReducedCands = false;
                 if (u.size() == 3)
                 {
@@ -530,9 +538,9 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
         {
             if (!(at(row, c).isGap() && at(r, col).isGap() && at(r, c).isGap())) continue;
             t = at(row, col).candidates;
-            t = c_intersection(t, at(row, c).candidates);
-            t = c_intersection(t, at(r, col).candidates);
-            t = c_intersection(t, at(r, c).candidates);
+            t = t && at(row, c).candidates;
+            t = t && at(r, col).candidates;
+            t = t && at(r, c).candidates;
             //check if the x pattern has a common candidate
             if (t.size() == 0) continue;
             //check conditions for x-wing column-wise
@@ -541,11 +549,11 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 if (j != col && j != c)
                 {
-                    allOtherCands.insert(at(row, j).candidates.begin(), at(row, j).candidates.end());
-                    allOtherCands.insert(at(r, j).candidates.begin(), at(r, j).candidates.end());
+                    allOtherCands = allOtherCands || at(row, j).candidates;
+                    allOtherCands = allOtherCands || at(r, j).candidates;
                 }
             }
-            tt = c_difference(t, allOtherCands);
+            tt = t - allOtherCands;
             bool stepReducedCands = false;
             if (tt.size() == 1)
             {
@@ -560,11 +568,11 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 if (i != row && i != r)
                 {
-                    allOtherCands.insert(at(i, col).candidates.begin(), at(i, col).candidates.end());
-                    allOtherCands.insert(at(i, c).candidates.begin(), at(i, c).candidates.end());
+                    allOtherCands = allOtherCands || at(i, col).candidates;
+                    allOtherCands = allOtherCands || at(i, c).candidates;
                 }
             }
-            tt = c_difference(t, allOtherCands);
+            tt = t - allOtherCands;
             stepReducedCands = false;
             if (tt.size() == 1)
             {
@@ -594,9 +602,9 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
         for (int c = col + 1; c < 9; c++)
         {
             if (!(at(row, c).lc() == 2 && at(r, col).lc() == 2)) continue;
-            t0 = c_intersection(at(row, col).candidates, at(row, c).candidates);
-            t1 = c_intersection(at(row, col).candidates, at(r, col).candidates);
-            t2 = c_intersection(at(row, c).candidates, at(r, col).candidates);
+            t0 = at(row, col).candidates && at(row, c).candidates;
+            t1 = at(row, col).candidates && at(r, col).candidates;
+            t2 = at(row, c).candidates && at(r, col).candidates;
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 int lcbefore = at(r, c).lc();
@@ -615,9 +623,9 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
         {
             if ((c >= colstart) && (c < colstart + 3)) continue;
             if (!(at(row, c).lc() == 2 && atBlock(blk, bi).lc() == 2)) continue;
-            t0 = c_intersection(at(row, col).candidates, at(row, c).candidates);
-            t1 = c_intersection(at(row, col).candidates, atBlock(blk, bi).candidates);
-            t2 = c_intersection(at(row, c).candidates, atBlock(blk, bi).candidates);
+            t0 = at(row, col).candidates && at(row, c).candidates;
+            t1 = at(row, col).candidates && atBlock(blk, bi).candidates;
+            t2 = at(row, c).candidates && atBlock(blk, bi).candidates;
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 int r1 = atBlock(blk, bi).row;
@@ -639,9 +647,9 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
         {
             if ((r >= rowstart) && (r < rowstart + 3)) continue;
             if (!(at(r, col).lc() == 2 && atBlock(blk, bi).lc() == 2)) continue;
-            t0 = c_intersection(at(row, col).candidates, at(r, col).candidates);
-            t1 = c_intersection(at(row, col).candidates, atBlock(blk, bi).candidates);
-            t2 = c_intersection(at(r, col).candidates, atBlock(blk, bi).candidates);
+            t0 = at(row, col).candidates && at(r, col).candidates;
+            t1 = at(row, col).candidates && atBlock(blk, bi).candidates;
+            t2 = at(r, col).candidates && atBlock(blk, bi).candidates;
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 int c1 = atBlock(blk, bi).col;
@@ -673,10 +681,10 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
         for (int j = colstart; j < colstart + 3; j++)
         {
             if (i == row || !at(i, j).isGap()) continue;
-            allOtherCands.insert(at(i, j).candidates.begin(), at(i, j).candidates.end());
+            allOtherCands = allOtherCands || at(i, j).candidates;
         }
     }
-    lockedCands = c_difference(at(row, col).candidates, allOtherCands);
+    lockedCands = at(row, col).candidates - allOtherCands;
     bool stepReducedCands = false;
     if (lockedCands.size() > 0)
     {
@@ -694,10 +702,10 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
         for (int j = colstart; j < colstart + 3; j++)
         {
             if (j == col || !at(i, j).isGap()) continue;
-            allOtherCands.insert(at(i, j).candidates.begin(), at(i, j).candidates.end());
+            allOtherCands = allOtherCands || at(i, j).candidates;
         }
     }
-    lockedCands = c_difference(at(row, col).candidates, allOtherCands);
+    lockedCands = at(row, col).candidates - allOtherCands;
     stepReducedCands = false;
     if (lockedCands.size() > 0)
     {
