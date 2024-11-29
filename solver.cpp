@@ -4,16 +4,60 @@
 
 using namespace std;
 
-Cell::Cell(int idx, int digit):
-    val(digit),
-    row(idx / 9),
-    col(idx % 9),
-    blk(3 * (row / 3) + (col / 3)),
-    blkidx(3 * (row % 3) + (col % 3)),
-    rowBlkPos(3 * (row / 3)),
-    colBlkPos(3 * (col / 3)),
-    pairColor(-1)
-{};
+
+int CandSet::at(int index)
+{
+    auto ci = this->data.begin();
+    advance(ci, index);
+    return *ci;
+}
+
+CandSet CandSet::operator-(CandSet& op)
+{
+    CandSet dummy;
+    set_difference(this->data.begin(), this->data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
+    return dummy;
+}
+
+CandSet CandSet::operator&&(CandSet& op)
+{
+    CandSet dummy;
+    set_intersection(this->data.begin(), this->data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
+    return dummy;
+}
+
+CandSet CandSet::operator||(CandSet& op)
+{
+    CandSet dummy;
+    dummy.data.insert(this->data.begin(), this->data.end());
+    dummy.data.insert(op.data.begin(), op.data.end());
+    return dummy;
+}
+
+CandSet& CandSet::operator+=(CandSet& op)
+{
+    this->data.insert(op.data.begin(), op.data.end());
+    return *this;
+}
+
+CandSet& CandSet::operator=(const CandSet& op)
+{
+    this->data = op.data;
+    return *this;
+}
+
+
+void Cell::init(int idx, int digit)
+{
+    val = digit;
+    row = idx / 9;
+    col = idx % 9;
+    blk = 3 * (row / 3) + (col / 3);
+    blkidx = 3 * (row % 3) + (col % 3);
+    rowBlkPos = 3 * (row / 3);
+    colBlkPos = 3 * (col / 3);
+    pairColor = -1;
+}
 
 string Cell::getOutput()
 {
@@ -25,30 +69,8 @@ SudokuBoard::SudokuBoard(int* board)
 {
     for (int i = 0; i < 81; i++)
     {
-        b.at(i) = Cell(i, board[i]); //move assignment
+        b.at(i).init(i, board[i]);
     }
-}
-
-set<int> operator-(set<int>& op1, set<int>& op2)
-{
-    set<int> dummy;
-    set_difference(op1.begin(), op1.end(), op2.begin(), op2.end(), inserter(dummy, dummy.begin()));
-    return dummy;
-}
-
-set<int> operator&&(set<int>& op1, set<int>& op2)
-{
-    set<int> dummy;
-    set_intersection(op1.begin(), op1.end(), op2.begin(), op2.end(), inserter(dummy, dummy.begin()));
-    return dummy;
-}
-
-set<int> operator||(set<int>& op1, set<int>& op2)
-{
-    set<int> result;
-    result.insert(op1.begin(), op1.end());
-    result.insert(op2.begin(), op2.end());
-    return result;
 }
 
 void SudokuBoard::appendSolvStep(int row, int col, string text, bool bReducedCands)
@@ -60,14 +82,12 @@ void SudokuBoard::appendSolvStep(int row, int col, string text, bool bReducedCan
     }
 }
 
-string SudokuBoard::cand2str(set<int> cands)
+string SudokuBoard::cand2str(CandSet cands)
 {
     string res = "{";
     for (int k = 0; k < cands.size(); k++)
     {
-        auto ci = cands.begin();
-        advance(ci, k);
-        res += to_string(*ci);
+        res += to_string(cands.at(k));
         res += ((k == cands.size() - 1) ? "}" : ", ");
     }
     return res;
@@ -280,11 +300,11 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
         return false;
     }
     //search along row and collect all other candidates
-    set<int> allOtherCands, t;
+    CandSet allOtherCands, t;
     for (int c = 0; c < 9; c++)
     {
         if (c == col || !at(row, c).isGap()) continue;
-        allOtherCands = allOtherCands || at(row, c).candidates;
+        allOtherCands += at(row, c).candidates;
     }
     t = at(row, col).candidates - allOtherCands;
     if (t.size() == 1)
@@ -300,7 +320,7 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     for (int r = 0; r < 9; r++)
     {
         if (r == row || !at(r, col).isGap()) continue;
-        allOtherCands = allOtherCands || at(r, col).candidates;
+        allOtherCands += at(r, col).candidates;
     }
     t = at(row, col).candidates - allOtherCands;
     if (t.size() == 1)
@@ -320,7 +340,7 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
         for (int c = colstart; c < colstart + 3; c++)
         {
             if ((r == row && c == col) || !at(r, c).isGap()) continue;
-            allOtherCands = allOtherCands || at(r, c).candidates;
+            allOtherCands += at(r, c).candidates;
         }
     }
     t = at(row, col).candidates - allOtherCands;
@@ -341,7 +361,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
     {
         return false;
     }
-    set<int> candPair = b[9 * row + col].candidates;
+    CandSet candPair = b[9 * row + col].candidates;
     for (int idx = 0; idx < 9; idx++)
     {
         //if cell(row, col) can basically be a naked pair, look for the other part in same row
@@ -395,7 +415,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
     {
         return false;
     }
-    set<int> allOtherCands, t;
+    CandSet allOtherCands, t;
     for (int idx = 0; idx < 9; idx++)
     {
         //search for a pair along row
@@ -407,7 +427,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             for (int j = 0; j < 9; j++)
             {
                 if (j == col || j == c) continue;
-                allOtherCands = allOtherCands || at(row, j).candidates;
+                allOtherCands += at(row, j).candidates;
             }
             t = at(row, col).candidates && at(row, c).candidates;
             t = t - allOtherCands;
@@ -428,7 +448,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             for (int i = 0; i < 9; i++)
             {
                 if (i == row || i == r) continue;
-                allOtherCands = allOtherCands || at(i, col).candidates;
+                allOtherCands += at(i, col).candidates;
             }
             t = at(row, col).candidates && at(r, col).candidates;
             t = t - allOtherCands;
@@ -455,7 +475,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
                 for (int j = colstart; j < colstart + 3; j++)
                 {
                     if ((i == row && j == col) || (i == r && j == c)) continue;
-                    allOtherCands = allOtherCands || at(i, j).candidates;
+                    allOtherCands += at(i, j).candidates;
                 }
             }
             t = at(row, col).candidates && at(r, c).candidates;
@@ -487,9 +507,9 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
             int c1 = idx1;
             if (c0 != col && c1 != col && c0 != c1 && (at(row, c0).lc() > 1) && (at(row, c1).lc() > 1))
             {
-                set<int> u = at(row, col).candidates;
-                u = u || at(row, c0).candidates;
-                u = u || at(row, c1).candidates;
+                CandSet u = at(row, col).candidates;
+                u += at(row, c0).candidates;
+                u += at(row, c1).candidates;
                 bool stepReducedCands = false;
                 if (u.size() == 3)
                 {
@@ -506,9 +526,9 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
             int r1 = idx1;
             if (r0 != row && r1 != row && r0 != r1 && (at(r0, col).lc() > 1) && (at(r1, col).lc() > 1))
             {
-                set<int> u = at(row, col).candidates;
-                u = u || at(r0, col).candidates;
-                u = u || at(r1, col).candidates;
+                CandSet u = at(row, col).candidates;
+                u += at(r0, col).candidates;
+                u += at(r1, col).candidates;
                 bool stepReducedCands = false;
                 if (u.size() == 3)
                 {
@@ -531,7 +551,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
     {
         return false;
     }
-    set<int> allOtherCands, t, tt;
+    CandSet allOtherCands, t, tt;
     for (int r = row + 1; r < 9; r++)
     {
         for (int c = col + 1; c < 9; c++)
@@ -549,8 +569,8 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 if (j != col && j != c)
                 {
-                    allOtherCands = allOtherCands || at(row, j).candidates;
-                    allOtherCands = allOtherCands || at(r, j).candidates;
+                    allOtherCands += at(row, j).candidates;
+                    allOtherCands += at(r, j).candidates;
                 }
             }
             tt = t - allOtherCands;
@@ -568,8 +588,8 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 if (i != row && i != r)
                 {
-                    allOtherCands = allOtherCands || at(i, col).candidates;
-                    allOtherCands = allOtherCands || at(i, c).candidates;
+                    allOtherCands += at(i, col).candidates;
+                    allOtherCands += at(i, c).candidates;
                 }
             }
             tt = t - allOtherCands;
@@ -595,7 +615,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
     int blk = at(row, col).blk;
     int rowstart = at(row, col).rowBlkPos;
     int colstart = at(row, col).colBlkPos;
-    set<int> t0, t1, t2;
+    CandSet t0, t1, t2;
     //check if we have a xy pattern in row-column scenario
     for (int r = row + 1; r < 9; r++)
     {
@@ -675,13 +695,13 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     int rowstart = at(row, col).rowBlkPos;
     int colstart = at(row, col).colBlkPos;
     //check if current cand list has unique elements within all other block rows
-    set<int> allOtherCands, lockedCands;
+    CandSet allOtherCands, lockedCands;
     for (int i = rowstart; i < rowstart + 3; i++)
     {
         for (int j = colstart; j < colstart + 3; j++)
         {
             if (i == row || !at(i, j).isGap()) continue;
-            allOtherCands = allOtherCands || at(i, j).candidates;
+            allOtherCands += at(i, j).candidates;
         }
     }
     lockedCands = at(row, col).candidates - allOtherCands;
@@ -702,7 +722,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
         for (int j = colstart; j < colstart + 3; j++)
         {
             if (j == col || !at(i, j).isGap()) continue;
-            allOtherCands = allOtherCands || at(i, j).candidates;
+            allOtherCands += at(i, j).candidates;
         }
     }
     lockedCands = at(row, col).candidates - allOtherCands;
@@ -726,7 +746,7 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
         return;
     }
     assert(color == 0 || color == 1);
-    set<int> candPair = at(row, col).candidates;
+    CandSet candPair = at(row, col).candidates;
     //reset field
     if (row1 == -1 && col1 == -1)
     {

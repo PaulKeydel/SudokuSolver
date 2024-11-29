@@ -1,6 +1,30 @@
 #include <set>
 #include <array>
 
+struct CandSet
+{
+    std::set<int> data;
+    CandSet() {};
+    void insert(int dig) { this->data.insert(dig); }
+    void erase(int dig) { this->data.erase(dig); }
+    int size() { return (int)(this->data.size()); }
+    void clear() { this->data.clear(); }
+    const std::set<int>::iterator begin() const { return this->data.begin(); }
+    const std::set<int>::iterator end() const { return this->data.end(); }
+    bool operator==(CandSet& op) { return this->data == op.data; }
+    bool operator!=(CandSet& op) { return this->data != op.data; }
+    int at(int index);
+    //take the difference
+    CandSet operator-(CandSet& op);
+    //take the intersection
+    CandSet operator&&(CandSet& op);
+    //take the union
+    CandSet operator||(CandSet& op);
+    //add candidates, copy assignment
+    CandSet& operator+=(CandSet& op);
+    CandSet& operator=(const CandSet& op);
+};
+
 struct Cell
 {
     //digit of the cell
@@ -16,33 +40,26 @@ struct Cell
     //color for color pair algorithm
     int pairColor;
     //set for storing candidates
-    std::set<int> candidates;
+    CandSet candidates;
     //methods
     Cell() {};
-    Cell(int idx, int digit);
-    Cell& operator=(Cell&& T) = default;
+    void init(int idx, int digit);
     std::string getOutput();
     bool isEq(int dig) { return (this->val == dig); };
     bool isGap() { return (this->val == 0); };
     //length of cands set and contain-function
-    const int lc() { return (int)this->candidates.size(); };
-    const bool hasC(int dig) { return (candidates.find(dig) != candidates.end()); };
+    const int lc() { return (int)this->candidates.data.size(); };
+    const bool hasC(int dig) { return (candidates.data.find(dig) != candidates.data.end()); };
 };
 
 class SudokuBoard
 {
 private:
     std::array<Cell, 81> b;
-    //take the difference
-    friend std::set<int> operator-(std::set<int>& op1, std::set<int>& op2);
-    //take the intersection
-    friend std::set<int> operator&&(std::set<int>& op1, std::set<int>& op2);
-    //take the union
-    friend std::set<int> operator||(std::set<int>& op1, std::set<int>& op2);
     //stuff for list of solving steps
     std::vector<std::pair<int, std::string>> solvingSteps;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
-    std::string cand2str(std::set<int> cands);
+    std::string cand2str(CandSet cands);
     std::string cord2str(int row, int col);
 public:
     SudokuBoard(int* board);
