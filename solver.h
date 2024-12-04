@@ -20,8 +20,9 @@ struct CandSet
     CandSet operator&&(CandSet& op);
     //take the union
     CandSet operator||(CandSet& op);
-    //add candidates, copy assignment
+    //add + remove candidates, copy assignment
     CandSet& operator+=(CandSet& op);
+    CandSet& operator-=(CandSet& op);
     CandSet& operator=(const CandSet& op);
 };
 
@@ -73,10 +74,10 @@ public:
     bool valid();
     //methods for managing candidate list
     void collectCands();
-    bool updateCandsInRow(int row, std::vector<int> excludedPositions, int dig);
-    bool updateCandsInCol(int col, std::vector<int> excludedPositions, int dig);
-    bool updateCandsInBlock(int blk, std::vector<int> excludedPositions, int dig);
-    void updateCandsFromSolvedCell(int row, int col);
+    bool updateCandsInRow(int row, std::vector<int> excludedPositions, CandSet digits);
+    bool updateCandsInCol(int col, std::vector<int> excludedPositions, CandSet digits);
+    bool updateCandsInBlock(int blk, std::vector<int> excludedPositions, CandSet digits);
+    void setFinalValue(int row, int col);
     //solving techniques
     bool checkCellForNakedSingle(int row, int col);
     bool checkCellForHiddenSingle(int row, int col);
