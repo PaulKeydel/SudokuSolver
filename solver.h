@@ -13,7 +13,6 @@ struct CandSet
     const std::set<int>::iterator end() const { return this->data.end(); }
     bool operator==(CandSet& op) { return this->data == op.data; }
     bool operator!=(CandSet& op) { return this->data != op.data; }
-    int at(int index);
     bool remove(CandSet& set);
     std::string cand2str();
     //take the difference

@@ -5,18 +5,12 @@
 using namespace std;
 
 
-int CandSet::at(int index)
-{
-    auto ci = this->data.begin();
-    advance(ci, index);
-    return *ci;
-}
-
 bool CandSet::remove(CandSet& set)
 {
     int lcbefore = this->size();
     for (auto it = set.begin(); it != set.end(); ++it)
     {
+        assert((*it > 0) && (*it < 10));
         this->data.erase(*it);
     }
     int lcafter = this->size();
@@ -25,10 +19,16 @@ bool CandSet::remove(CandSet& set)
 
 string CandSet::cand2str()
 {
+    if (this->data.empty())
+    {
+        return "{}";
+    }
     string res = "{";
     for (int k = 0; k < data.size(); k++)
     {
-        res += to_string(this->at(k));
+        auto ci = this->data.begin();
+        advance(ci, k);
+        res += to_string(*ci);
         res += ((k == data.size() - 1) ? "}" : ", ");
     }
     return res;
@@ -216,13 +216,13 @@ void SudokuBoard::collectCands()
         int row = b.at(idx).row;
         int col = b.at(idx).col;
         int blk = b.at(idx).blk;
-            for (int dig = 1; dig < 10; dig++)
+        for (int dig = 1; dig < 10; dig++)
+        {
+            if (!(isInRow(row, dig) || isInCol(col, dig) || isInBlock(blk, dig)))
             {
-                if (!(isInRow(row, dig) || isInCol(col, dig) || isInBlock(blk, dig)))
-                {
-                    b.at(idx).candidates.insert(dig);
-                }
+                b.at(idx).candidates.insert(dig);
             }
+        }
     }
 }
 
@@ -365,7 +365,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         {
             bool stepReducedCands = updateCandsInRow(row, vector<int>{col, c}, candPair);
             appendSolvStep(row, col, "Naked Pair with cell " + at(row, c).cord2str(), stepReducedCands);
-            return true;
+            if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same col
         int r = idx;
@@ -373,7 +373,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         {
             bool stepReducedCands = updateCandsInCol(col, vector<int>{row, r}, candPair);
             appendSolvStep(row, col, "Naked Pair with cell " + at(r, col).cord2str(), stepReducedCands);
-            return true;
+            if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same block
         int blkIdx = idx;
@@ -382,7 +382,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         {
             bool stepReducedCands = updateCandsInBlock(blk, vector<int>{at(row, col).blkidx, blkIdx}, candPair);
             appendSolvStep(row, col, "Naked Pair with cell " + atBlock(blk, blkIdx).cord2str(), stepReducedCands);
-            return true;
+            if (stepReducedCands) return true;
         }
     }
     return false;
@@ -486,8 +486,8 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInRow(row, vector<int>{col, c0, c1}, u);
-                    appendSolvStep(row, col, "Naked Triplet with cell " + at(row, c0).cord2str() + " and cell " + at(row, c1).cord2str(), stepReducedCands);
-                    return true;
+                    appendSolvStep(row, col, "Naked Triplet in row with cell " + at(row, c0).cord2str() + " and cell " + at(row, c1).cord2str(), stepReducedCands);
+                    if (stepReducedCands) return true;
                 }
             }
             //if cell(row, col) can basically be a naked triple, look for the other part in same col
@@ -501,8 +501,24 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInCol(col, vector<int>{row, r0, r1}, u);
-                    appendSolvStep(row, col, "Naked Triplet with cell " + at(r0, col).cord2str() + " and cell " + at(r1, col).cord2str(), stepReducedCands);
-                    return true;
+                    appendSolvStep(row, col, "Naked Triplet in col with cell " + at(r0, col).cord2str() + " and cell " + at(r1, col).cord2str(), stepReducedCands);
+                    if (stepReducedCands) return true;
+                }
+            }
+            //if cell(row, col) can basically be a naked triple, look for the other part in same block
+            int blkIdx0 = idx0;
+            int blkIdx1 = idx1;
+            int blk = at(row, col).blk;
+            if (blkIdx0 != at(row, col).blkidx && blkIdx1 != at(row, col).blkidx && blkIdx0 != blkIdx1 && atBlock(blk, blkIdx0).lc() > 1 && atBlock(blk, blkIdx1).lc() > 1)
+            {
+                CandSet u = at(row, col).candidates;
+                u += atBlock(blk, blkIdx0).candidates;
+                u += atBlock(blk, blkIdx1).candidates;
+                if (u.size() == 3)
+                {
+                    bool stepReducedCands = updateCandsInBlock(blk, vector<int>{at(row, col).blkidx, blkIdx0, blkIdx1}, u);
+                    appendSolvStep(row, col, "Naked Triplet in block with cell " + atBlock(blk, blkIdx0).cord2str() + " and cell " + atBlock(blk, blkIdx1).cord2str(), stepReducedCands);
+                    if (stepReducedCands) return true;
                 }
             }
         }
@@ -545,7 +561,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
                 stepReducedCands |= updateCandsInCol(col, vector<int>{row, r}, tt);
                 stepReducedCands |= updateCandsInCol(c, vector<int>{row, r}, tt);
                 appendSolvStep(row, col, "column-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
-                return true;
+                if (stepReducedCands) return true;
             }
             //check conditions for x-wing row-wise
             allOtherCands.clear();
@@ -564,7 +580,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
                 stepReducedCands |= updateCandsInRow(row, vector<int>{col, c}, tt);
                 stepReducedCands |= updateCandsInRow(r, vector<int>{col, c}, tt);
                 appendSolvStep(row, col, "row-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
-                return true;
+                if (stepReducedCands) return true;
             }
         }
     }
@@ -594,7 +610,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             {
                 bool stepReducedCands = at(r, c).candidates.remove(t2);
                 appendSolvStep(row, col, "XY wing", stepReducedCands);
-                return true;
+                if (stepReducedCands) return true;
             }
         }
     }
@@ -616,6 +632,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
                 {
                     bool stepReducedCands = at(r1, c1).candidates.remove(t2);
                     appendSolvStep(row, col, "XY wing", stepReducedCands);
+                    if (stepReducedCands) return true;
                 }
             }
         }
@@ -638,6 +655,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
                 {
                     bool stepReducedCands = at(r1, c1).candidates.remove(t2);
                     appendSolvStep(row, col, "XY wing", stepReducedCands);
+                    if (stepReducedCands) return true;
                 }
             }
         }
