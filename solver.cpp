@@ -628,12 +628,17 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 int r1 = atBlock(blk, bi).row;
+                bool stepReducedCands = false;
                 for (int c1 = at(row, c).colBlkPos; c1 < at(row, c).colBlkPos + 3; c1++)
                 {
-                    bool stepReducedCands = at(r1, c1).candidates.remove(t2);
-                    appendSolvStep(row, col, "XY wing", stepReducedCands);
-                    if (stepReducedCands) return true;
+                    stepReducedCands |= at(r1, c1).candidates.remove(t2);
                 }
+                for (int c1 = colstart; c1 < colstart + 3; c1++)
+                {
+                    stepReducedCands |= at(row, c1).candidates.remove(t2);
+                }
+                appendSolvStep(row, col, "XY wing in block-row scenario", stepReducedCands);
+                if (stepReducedCands) return true;
             }
         }
     }
@@ -651,12 +656,17 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 int c1 = atBlock(blk, bi).col;
+                bool stepReducedCands = false;
                 for (int r1 = at(r, col).rowBlkPos; r1 < at(r, col).rowBlkPos + 3; r1++)
                 {
-                    bool stepReducedCands = at(r1, c1).candidates.remove(t2);
-                    appendSolvStep(row, col, "XY wing", stepReducedCands);
-                    if (stepReducedCands) return true;
+                    stepReducedCands |= at(r1, c1).candidates.remove(t2);
                 }
+                for (int r1 = rowstart; r1 < rowstart + 3; r1++)
+                {
+                    stepReducedCands |= at(r1, col).candidates.remove(t2);
+                }
+                appendSolvStep(row, col, "XY wing in block-column scenario", stepReducedCands);
+                if (stepReducedCands) return true;
             }
         }
     }
