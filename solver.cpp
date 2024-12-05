@@ -614,10 +614,10 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             }
         }
     }
-    //check if we have a xy pattern in block-column scenario
+    //check if we have a xy pattern in block-row scenario
     for (int bi = 0; bi < 9; bi++)
     {
-        if (at(blk, bi).row == row) continue;
+        if (atBlock(blk, bi).row == row) continue;
         for (int c = 0; c < 9; c++)
         {
             if ((c >= colstart) && (c < colstart + 3)) continue;
@@ -637,10 +637,10 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             }
         }
     }
-    //check if we have a xy pattern in block-row scenario
+    //check if we have a xy pattern in block-column scenario
     for (int bi = 0; bi < 9; bi++)
     {
-        if (at(blk, bi).col == col) continue;
+        if (atBlock(blk, bi).col == col) continue;
         for (int r = 0; r < 9; r++)
         {
             if ((r >= rowstart) && (r < rowstart + 3)) continue;
@@ -686,7 +686,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         bool stepReducedCands = updateCandsInRow(row, vector<int>{colstart, colstart + 1, colstart + 2}, lockedCands);
         appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in row", stepReducedCands);
-        return true;
+        if (stepReducedCands) return true;
     }
     //check if current cand list has unique elements within all other block cols
     allOtherCands.clear();
@@ -703,7 +703,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         bool stepReducedCands = updateCandsInCol(col, vector<int>{rowstart, rowstart + 1, rowstart + 2}, lockedCands);
         appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in col", stepReducedCands);
-        return true;
+        if (stepReducedCands) return true;
     }
     return false;
 }
@@ -790,13 +790,13 @@ void SudokuBoard::applyStrategies()
             }
             if (checkCellForNakedSingle(row, col)) continue;
             if (checkCellForHiddenSingle(row, col)) continue;
-            if (checkCellForNakedPair(row, col)) continue;
-            if (checkCellForHiddenPair(row, col)) continue;
-            if (checkCellForNakedTriplet(row, col)) continue;
-            if (checkCellForLockedCandsInBlocks(row, col)) continue;
-            if (checkCellForXWing(row, col)) continue;
-            if (checkCellForXYWing(row, col)) continue;
-            checkForIntersectingColorPairs(row, col);
+            bool tryNext = !checkCellForNakedPair(row, col);
+            if (tryNext) tryNext = !checkCellForHiddenPair(row, col);
+            if (tryNext) tryNext = !checkCellForLockedCandsInBlocks(row, col);
+            if (tryNext) tryNext = !checkCellForNakedTriplet(row, col);
+            if (tryNext) tryNext = !checkCellForXWing(row, col);
+            if (tryNext) tryNext = !checkCellForXYWing(row, col);
+            if (tryNext) checkForIntersectingColorPairs(row, col);
         }
     }
 }
