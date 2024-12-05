@@ -14,6 +14,8 @@ struct CandSet
     bool operator==(CandSet& op) { return this->data == op.data; }
     bool operator!=(CandSet& op) { return this->data != op.data; }
     int at(int index);
+    bool remove(CandSet& set);
+    std::string cand2str();
     //take the difference
     CandSet operator-(CandSet& op);
     //take the intersection
@@ -45,12 +47,11 @@ struct Cell
     //methods
     Cell() {};
     void init(int idx, int digit);
-    std::string getOutput();
+    std::string cord2str();
     bool isEq(int dig) { return (this->val == dig); };
     bool isGap() { return (this->val == 0); };
-    //length of cands set and contain-function
+    //length of cands set
     const int lc() { return (int)this->candidates.data.size(); };
-    const bool hasC(int dig) { return (candidates.data.find(dig) != candidates.data.end()); };
 };
 
 class SudokuBoard
@@ -60,8 +61,6 @@ private:
     //stuff for list of solving steps
     std::vector<std::pair<int, std::string>> solvingSteps;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
-    std::string cand2str(CandSet cands);
-    std::string cord2str(int row, int col);
 public:
     SudokuBoard(int* board);
     void print();
