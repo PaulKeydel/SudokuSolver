@@ -826,13 +826,33 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
             }
         }
     }
-    //do the recursive coloring process, build a three way recursion and loop over cols, rows and blocks
+    //start the recursive coloring process and build the color tree
     Cell* currCell = &at(row, col);
     if (row1 != -1 && col1 != -1)
     {
         currCell = &at(row1, col1);
     }
     int nextColor = ~color & 1;
+    //check if one cell color in a block has a relation to a cell which is either in same col or in same row
+    int numLeftCellsInBlk = 0;
+    int relRow = -1;
+    int relCol = -1;
+    for (int bi = 0; bi < 9; bi++)
+    {
+        if (bi == currCell->blkidx) continue;
+        if (atBlock(currCell->blk, bi).isGap())
+        {
+            numLeftCellsInBlk++;
+            if (numLeftCellsInBlk == 1)
+            {
+                relRow = atBlock(currCell->blk, bi).row;
+                relCol = atBlock(currCell->blk, bi).col;
+            }
+            if (numLeftCellsInBlk > 1 && relRow != atBlock(currCell->blk, bi).row) relRow = -1;
+            if (numLeftCellsInBlk > 1 && relCol != atBlock(currCell->blk, bi).col) relCol = -1;
+        }
+    }
+    //recursive calls
     for (int idx = 0; idx < 9; idx++)
     {
         Cell* nextCell = &at(currCell->row, idx);
@@ -850,40 +870,17 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
         {
             checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
         }
-    }
-    int numLeftCellsInBlk = 0;
-    Cell* secondLeft;
-    Cell* thirdLeft;
-    for (int bi = 0; bi < 9; bi++)
-    {
-        if (bi == currCell->blkidx) continue;
-        if (atBlock(currCell->blk, bi).isGap())
+        if (numLeftCellsInBlk > 1 && relCol > -1 && !(idx >= currCell->rowBlkPos && idx < currCell->rowBlkPos + 3))
         {
-            numLeftCellsInBlk++;
-            if (numLeftCellsInBlk == 1) secondLeft = &atBlock(currCell->blk, bi);
-            if (numLeftCellsInBlk == 2) thirdLeft = &atBlock(currCell->blk, bi);
-        }
-    }
-    if (numLeftCellsInBlk == 2 && secondLeft->col == thirdLeft->col)
-    {
-        int c = secondLeft->col;
-        for (int r = 0; r < 9; r++)
-        {
-            if (r >= currCell->rowBlkPos && r < currCell->rowBlkPos + 3) continue;
-            Cell* nextCell = &at(r, c);
+            nextCell = &at(idx, relCol);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
                 checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
             }
         }
-    }
-    if (numLeftCellsInBlk == 2 && secondLeft->row == thirdLeft->row)
-    {
-        int r = secondLeft->row;
-        for (int c = 0; c < 9; c++)
+        if (numLeftCellsInBlk > 1 && relRow > -1 && !(idx >= currCell->colBlkPos && idx < currCell->colBlkPos + 3))
         {
-            if (c >= currCell->colBlkPos && c < currCell->colBlkPos + 3) continue;
-            Cell* nextCell = &at(r, c);
+            nextCell = &at(relRow, idx);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
                 checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
