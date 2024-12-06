@@ -1,6 +1,6 @@
 #include <curses.h>
 #include <vector>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -8,18 +8,6 @@
 #include <sstream>
 #include "solver.h"
 
-int TestBoard1[81] =
-{
-    8, 4, 0, 6, 5, 0, 0, 2, 0,
-    0, 0, 3, 0, 0, 0, 0, 0, 0,
-    0, 2, 0, 0, 0, 7, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 6, 0,
-    0, 0, 0, 0, 6, 0, 0, 0, 8,
-    9, 0, 6, 0, 0, 4, 0, 0, 1,
-    0, 5, 0, 3, 7, 0, 0, 8, 0,
-    0, 0, 0, 8, 0, 0, 3, 0, 7,
-    0, 0, 0, 0, 0, 9, 4, 0, 0
-};
 
 void getBoardFromStdin(int* board)
 {
@@ -132,8 +120,9 @@ int main(int argc, char *argv[])
         saveBoardToFile("last.txt", board);
     }
     SudokuBoard sb(board);
-    sb.solve(1000);
+    bool solved = sb.solve(1000);
     sb.print();
     sb.printSolvingSteps();
+    std::cout << (solved ? "Solved" : "Not solvable") << std::endl;
     return 0;
 }

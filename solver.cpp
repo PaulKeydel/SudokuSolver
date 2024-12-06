@@ -681,7 +681,8 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     }
     int rowstart = at(row, col).rowBlkPos;
     int colstart = at(row, col).colBlkPos;
-    //check if current cand list has unique elements within all other block rows
+    int blk = at(row, col).blk;
+    //check row-within-block scenario
     CandSet allOtherCands, lockedCands;
     for (int i = rowstart; i < rowstart + 3; i++)
     {
@@ -698,7 +699,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
         appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in row", stepReducedCands);
         if (stepReducedCands) return true;
     }
-    //check if current cand list has unique elements within all other block cols
+    //check col-within-block scenario
     allOtherCands.clear();
     for (int i = rowstart; i < rowstart + 3; i++)
     {
@@ -713,6 +714,38 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         bool stepReducedCands = updateCandsInCol(col, vector<int>{rowstart, rowstart + 1, rowstart + 2}, lockedCands);
         appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in col", stepReducedCands);
+        if (stepReducedCands) return true;
+    }
+    //check block-within-row scenario
+    allOtherCands.clear();
+    for (int j = 0; j < 9; j++)
+    {
+        if ((j >= colstart) && (j < colstart + 3)) continue;
+        if (!at(row, j).isGap()) continue;
+        allOtherCands += at(row, j).candidates;
+    }
+    lockedCands = at(row, col).candidates - allOtherCands;
+    if (lockedCands.size() > 0)
+    {
+        int exBlkIdx = 3 * (at(row, col).blkidx / 3);
+        bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 1, exBlkIdx + 2}, lockedCands);
+        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block", stepReducedCands);
+        if (stepReducedCands) return true;
+    }
+    //check block-within-col scenario
+    allOtherCands.clear();
+    for (int i = 0; i < 9; i++)
+    {
+        if ((i >= rowstart) && (i < rowstart + 3)) continue;
+        if (!at(i, col).isGap()) continue;
+        allOtherCands += at(i, col).candidates;
+    }
+    lockedCands = at(row, col).candidates - allOtherCands;
+    if (lockedCands.size() > 0)
+    {
+        int exBlkIdx = at(row, col).blkidx % 3;
+        bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 3, exBlkIdx + 6}, lockedCands);
+        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block", stepReducedCands);
         if (stepReducedCands) return true;
     }
     return false;
@@ -811,7 +844,7 @@ void SudokuBoard::applyStrategies()
     }
 }
     
-void SudokuBoard::solve(int numIterations)
+bool SudokuBoard::solve(int numIterations)
 {
     //fill each cand list
     collectCands();
@@ -824,4 +857,5 @@ void SudokuBoard::solve(int numIterations)
         applyStrategies();
         valid = this->valid();
     }
+    return valid;
 }

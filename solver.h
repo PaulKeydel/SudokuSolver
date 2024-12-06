@@ -87,5 +87,5 @@ public:
     bool checkCellForLockedCandsInBlocks(int row, int col);
     void checkForIntersectingColorPairs(int row, int col, int row1 = -1, int col1 = -1, int color = 0);
     void applyStrategies();
-    void solve(int numIterations = INT_MAX);
+    bool solve(int numIterations = INT_MAX);
 };
