@@ -776,11 +776,12 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
     {
         at(row1, col1).pairColor = color;
         assert(at(row1, col1).lc() == 2);
-        //update cand list if we have an intersecting color pair
+        //try to update
         for (int r = 0; r < 9; r++)
         {
             for (int c = 0; c < 9; c++)
             {
+                //update cand list if we have an intersecting color pair
                 if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
                 {
                     assert(at(r, col1).pairColor == -1);
@@ -789,6 +790,38 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                     appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", stepReducedCands);
                     stepReducedCands = at(row1, c).candidates.remove(candPair);
                     appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", stepReducedCands);
+                }
+                //determine candPair by a Naked Pair that has only one candidate in common
+                if (r != row1 && c != col1 && at(r, c).pairColor == color)
+                {
+                    for (int i = 0; i < 9; i++)
+                    {
+                        if (i == row1 || i == r) continue;
+                        CandSet t0 = at(i, col1).candidates;
+                        CandSet t1 = at(i, c).candidates;
+                        CandSet t2 = candPair - t0;
+                        if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
+                        {
+                            at(row1, col1).candidates = t2;
+                            at(r, c).candidates = t2;
+                            appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                            appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                        }
+                    }
+                    for (int j = 0; j < 9; j++)
+                    {
+                        if (j == col1 || j == c) continue;
+                        CandSet t0 = at(row1, j).candidates;
+                        CandSet t1 = at(r, j).candidates;
+                        CandSet t2 = candPair - t0;
+                        if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
+                        {
+                            at(row1, col1).candidates = t2;
+                            at(r, c).candidates = t2;
+                            appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                            appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                        }
+                    }
                 }
             }
         }
