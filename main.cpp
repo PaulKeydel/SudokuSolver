@@ -124,5 +124,5 @@ int main(int argc, char *argv[])
     sb.print();
     sb.printSolvingSteps();
     std::cout << (solved ? "Solved" : "Not solvable") << std::endl;
-    return 0;
+    return (int)solved - 1;
 }
