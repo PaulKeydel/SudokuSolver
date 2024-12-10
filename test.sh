@@ -2,8 +2,9 @@
 
 make
 
-for filename in testboards/*.txt; do
-    ./sudoku "$filename" > /dev/null
+cd testboards
+for filename in *.txt; do
+    ../sudoku "$filename" > /dev/null
     if [ $? -eq 0 ]
     then
         echo "${filename} ... check"
@@ -11,3 +12,4 @@ for filename in testboards/*.txt; do
         echo "${filename} ... cannot be solved"
     fi
 done
+cd ..
