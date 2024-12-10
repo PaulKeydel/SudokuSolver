@@ -1,12 +1,27 @@
 #include <set>
 #include <array>
+#include <vector>
 
+/*! CandSet is used to store and manage all candidates of a cell. */
 struct CandSet
 {
     std::set<int> data;
+    /*! Creates an empty candidate container. After creation, the objects internal data variable has size 0.
+    */
     CandSet() {};
+    /*! Inserts a specific candidate number into the list.
+        \param dig The digit to be inserted into the set.
+        \return Nothing.
+    */
     void insert(int dig) { this->data.insert(dig); }
+    /*! Deletes a specific candidate number from list.
+        \param dig The digit to be deleted from set.
+        \return Nothing.
+    */
     void erase(int dig) { this->data.erase(dig); }
+    /*! Gives the number of candidates which have been stored.
+        \return The size as an int value.
+    */
     int size() { return (int)(this->data.size()); }
     void clear() { this->data.clear(); }
     const std::set<int>::iterator begin() const { return this->data.begin(); }
@@ -15,15 +30,36 @@ struct CandSet
     bool operator!=(CandSet& op) { return this->data != op.data; }
     bool remove(CandSet& set);
     std::string cand2str();
-    //take the difference
+    /*! Takes the difference of two candidate sets.
+        \param op The CandSet that should be subtracted.
+        \return The difference as a new CandSet.
+    */
     CandSet operator-(CandSet& op);
-    //take the intersection
+    /*! Takes the intersection of two candidate sets.
+        \param op The second CandSet.
+        \return The intersection as a new CandSet.
+    */
     CandSet operator&&(CandSet& op);
-    //take the union
+    /*! Takes the union of two candidate sets.
+        \param op The second CandSet.
+        \return The union as a new CandSet.
+    */
     CandSet operator||(CandSet& op);
-    //add + remove candidates, copy assignment
+    //add + remove candidates, 
+    /*! Adds candidates to the current CandSet object.
+        \param op The CandSet that should be added.
+        \return Reference to the current object.
+    */
     CandSet& operator+=(CandSet& op);
+    /*! Removes candidates from the current CandSet object.
+        \param op The CandSet that should be removed.
+        \return Reference to the current object.
+    */
     CandSet& operator-=(CandSet& op);
+    /*! Copy assignment operator
+        \param op Source.
+        \return Reference to the current object.
+    */
     CandSet& operator=(const CandSet& op);
 };
 

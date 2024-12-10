@@ -1,7 +1,8 @@
 # SudokuSolver
-This C++ program can solve Sudokus by applying human strategies. Just compile the project using the makefile and run it in terminal. A simple text-based user interface is provided in order to enter the quiz. It's also possible to read a quiz from file (see boards in this repo).
+This C++ program can solve Sudokus by applying human strategies. A simple text-based user interface is provided in order to easily enter the quiz. It's also possible to read a quiz from file (see boards in this repo).
 
-9 logical strategies are implemented:
+**How does the solving algorithm work?:** First, the program passes through all empty cells and collects all possible candidates for each cell. Depending on how many entries are given in the same row, column or block, an empty cell can have one or more possible candidates. Based on logical rules and dependencies between cells, the algortihm then tries to eliminate candidates until only one number is left in the set. 9 logical strategies are implemented so far:
+
 * Hidden singles
 * Naked singles
 * Hidden pairs
@@ -12,9 +13,11 @@ This C++ program can solve Sudokus by applying human strategies. Just compile th
 * XY-wings
 * Colored pairs
 
-For further descriptions see https://www.sudoku9x9.com/sudoku_solving_techniques.php
+For further descriptions and illustrations see https://www.sudoku9x9.com/sudoku_solving_techniques.php
 
-As an example you can solve the quiz `test.txt` from the testboard directory. Then simply run `./sudoku testboards/test.txt` (if you're on a UNIX system). The program will solve the quiz and prints all solving steps:
+**How to use the algorithm?:** Just compile the project using the makefile (run `make` or `make debug`) and run the executable in terminal. Please note that the makefile is configured to use the gcc compiler. Change this if you're on a non-UNIX system.
+
+As an example you might solve the quiz `test.txt` from the testboard directory. Then simply run `./sudoku testboards/test.txt`. The program will solve the quiz and prints all solving steps:
 ```
 4  6  9    2  3  5    8  1  7    
 2  5  1    7  8  9    6  4  3    
@@ -113,5 +116,6 @@ As an example you can solve the quiz `test.txt` from the testboard directory. Th
 (6, 2): Naked Single
 Solved
 ```
+**Documentation:** The repository additionally contains a Doxygen config file. If you have Doxygen installed, run `make doc` to create the documentation. Otherwise you'll find all relevant comments in `solver.h`.
 
 **Python implementation:** An older version of the solving algorithm was written in Python. Use `python3 sudoku.py <file with board>` to test this.

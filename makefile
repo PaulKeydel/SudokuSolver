@@ -20,3 +20,6 @@ $(TARGET): $(OBJS)
 clean:
 	rm *.o
 	rm $(TARGET)
+
+doc:
+	doxygen Doxyfile
