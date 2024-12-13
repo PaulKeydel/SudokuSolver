@@ -21,5 +21,8 @@ clean:
 	rm *.o
 	rm $(TARGET)
 
+.PHONY: doc
 doc:
-	doxygen Doxyfile
+	cd doc; doxygen Doxyfile
+	cd doc/latex; make
+	cp doc/latex/refman.pdf doc/refman.pdf

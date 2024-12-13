@@ -1,23 +1,23 @@
 # SudokuSolver
-This C++ program can solve Sudokus by applying human strategies. A simple text-based user interface is provided in order to easily enter the quiz. It's also possible to read a quiz from file (see boards in this repo).
+This C++ program can solve Sudokus by applying human strategies. A simple text-based user interface is provided in order to easily enter the quiz. It's also possible to read a quiz from file. A few test boards are in this repo.
 
-**How does the solving algorithm work?:** First, the program passes through all empty cells and collects all possible candidates for each cell. Depending on how many entries are given in the same row, column or block, an empty cell can have one or more possible candidates. Based on logical rules and dependencies between cells, the algortihm then tries to eliminate candidates until only one number is left in the set. 9 logical strategies are implemented so far:
+**How does the solving algorithm work?** First, the program passes through all empty cells and collects all possible candidates for each cell. Depending on how many entries are given in the same row, column or block, an empty cell can have one or more possible candidates. Based on logical rules and dependencies between cells, the algortihm then tries to eliminate candidates until only one number is left in the set. This, however, can not always be guaranteed. Sudokus can become very complex and because strategic solving needs to include many constellations and subcases, the candidate reduction is not always sucessful. Even if this implementation says the quiz is not solvable, you might have the chance to find a solution with pen and paper. So far, this implementation focuses on 9 logical strategies.
 
 * Hidden singles
 * Naked singles
 * Hidden pairs
 * Naked pairs
 * Naked triplets
-* Locked candidates in blocks
+* Locked candidates
 * X-wings
 * XY-wings
 * Colored pairs
 
 For further descriptions and illustrations see https://www.sudoku9x9.com/sudoku_solving_techniques.php
 
-**How to use the algorithm?:** Just compile the project using the makefile (run `make` or `make debug`) and run the executable in terminal. Please note that the makefile is configured to use the gcc compiler. Change this if you're on a non-UNIX system.
+**How to use the algorithm?** Just compile the project using the makefile (run `make` or `make debug`), execute `./sudoku` in terminal and enter your Sudoku. Please note that the makefile is configured to use the gcc compiler (change if you're on a non-UNIX system).
 
-As an example you might solve the quiz `test.txt` from the testboard directory. Then simply run `./sudoku testboards/test.txt`. The program will solve the quiz and prints all solving steps:
+As an example you might solve the quiz `test.txt` from the testboard directory. Then simply run `./sudoku testboards/test.txt`. The program will solve the quiz and prints all solving steps starting with the (row, col)-coordinates of the current cell.
 ```
 4  6  9    2  3  5    8  1  7    
 2  5  1    7  8  9    6  4  3    
@@ -116,6 +116,6 @@ As an example you might solve the quiz `test.txt` from the testboard directory. 
 (6, 2): Naked Single
 Solved
 ```
-**Documentation:** The repository additionally contains a Doxygen config file. If you have Doxygen installed, run `make doc` to create the documentation. Otherwise you'll find all relevant comments in `solver.h`.
+**Documentation:** The repository additionally contains a Doxygen config file. If you have Doxygen installed, run `make doc` to create the documentation. You'll get a html and a pdf documentation (pdf is in `doc` folder). If you don't have Doxygen, you'll find all relevant comments in `solver.h`.
 
 **Python implementation:** An older version of the solving algorithm was written in Python. Use `python3 sudoku.py <file with board>` to test this.

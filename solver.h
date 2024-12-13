@@ -2,67 +2,68 @@
 #include <array>
 #include <vector>
 
-/*! CandSet is used to store and manage all candidates of a cell. */
+/*!
+    CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.
+
+    CandSet::data is a std::set-container for storing all possible candidates. Internally the data structure is an std::set<int>.
+
+    To simplify coding, several operators are overloaded in this class. With CandSet it's possible to use =, ==, !=, -, +=, -=, || and &&. The binary || operator calculates the union between two CandSets while the && operator takes the intersection between the left and right operand. The assignment(=) creates a copy of the source.
+*/
 struct CandSet
 {
     std::set<int> data;
-    /*! Creates an empty candidate container. After creation, the objects internal data variable has size 0.
-    */
+    /*! Creates an empty candidate container. After creation, the objects internal data variable has size 0.*/
     CandSet() {};
     /*! Inserts a specific candidate number into the list.
-        \param dig The digit to be inserted into the set.
-        \return Nothing.
+        \param dig The digit to be inserted into the set (between 1 and 9).
     */
     void insert(int dig) { this->data.insert(dig); }
     /*! Deletes a specific candidate number from list.
-        \param dig The digit to be deleted from set.
-        \return Nothing.
+        \param dig The digit to be deleted from set (between 1 and 9).
     */
     void erase(int dig) { this->data.erase(dig); }
-    /*! Gives the number of candidates which have been stored.
-        \return The size as an int value.
+    /*! Gives the number of listed candidates.
+        \return dig The number of candidates as an int value. If CandSet::data is empty, 0 is returned.
     */
     int size() { return (int)(this->data.size()); }
+    /*! Reset the object and delete all candidates in set. After this, CandSet::size is 0.
+    */
     void clear() { this->data.clear(); }
     const std::set<int>::iterator begin() const { return this->data.begin(); }
     const std::set<int>::iterator end() const { return this->data.end(); }
+    /*! Removes all candidates that are given by the argument.
+        \return <true> if at least one candidate could successfully be removed. <false> if the size could not be reduced.
+    */
+    bool remove(CandSet& set);
+    /*! Produces a formatted output string containing the entire set of candidates.
+        \return A string "{cand0, cand1, cand2}".
+    */
+    std::string cand2str();
     bool operator==(CandSet& op) { return this->data == op.data; }
     bool operator!=(CandSet& op) { return this->data != op.data; }
-    bool remove(CandSet& set);
-    std::string cand2str();
-    /*! Takes the difference of two candidate sets.
-        \param op The CandSet that should be subtracted.
-        \return The difference as a new CandSet.
-    */
     CandSet operator-(CandSet& op);
-    /*! Takes the intersection of two candidate sets.
-        \param op The second CandSet.
-        \return The intersection as a new CandSet.
-    */
     CandSet operator&&(CandSet& op);
-    /*! Takes the union of two candidate sets.
-        \param op The second CandSet.
-        \return The union as a new CandSet.
-    */
     CandSet operator||(CandSet& op);
-    //add + remove candidates, 
-    /*! Adds candidates to the current CandSet object.
-        \param op The CandSet that should be added.
-        \return Reference to the current object.
-    */
     CandSet& operator+=(CandSet& op);
-    /*! Removes candidates from the current CandSet object.
-        \param op The CandSet that should be removed.
-        \return Reference to the current object.
-    */
     CandSet& operator-=(CandSet& op);
-    /*! Copy assignment operator
-        \param op Source.
-        \return Reference to the current object.
-    */
     CandSet& operator=(const CandSet& op);
 };
 
+/*!
+    Each of all 81 Sudoku cells are mapped to an object of the class Cell. The Cell class contains the coordinates, the digit (0 if it's a gap) and the color parameter for the coloring pair algorithm. Here is an overview about the class members:
+    
+    Cell::val is an int and contains the digit (0 <= val <=9, 0 = empty).
+
+    Cell::row and Cell::col are used to index all board cells. The (row, col)-coordinate system starts in the upper left with (row, col) = (0, 0) and ends with (8, 8) in the bottom right.
+
+    Cell::blk and Cell::blkidx form a coordinate system based on the 3x3-subblocks which will be counted in Z-scan order, starting with subblock blk = 0 in the upper left. blkidx addresses all 9 cells within the 3x3 block by row-wise indexing, 0 <= blkidx < 9.
+
+    Cell::rowBlkPos and Cell::colBlkPos are (row, col)-coordinates referencing to the upper left cell within the current subblock. They are generally multiple of 3 (= 0, 3 or 6).
+
+    Cell::candidates is used to store and manage all possible candidates. It's an object of class CandSet. If Cell::val is between 1 and 9, Cell::candidates will be an empty set.
+
+    Cell::pairColor is needed for pairing colors. All identical candidate pairs in board can be colorized by setting Cell::pairColor alternately to 0 and 1.
+*/
 struct Cell
 {
     //digit of the cell
@@ -81,14 +82,23 @@ struct Cell
     CandSet candidates;
     //methods
     Cell() {};
+    /*!Set all class parameters (position and digit) based on the Z-ordered cell index.*/
     void init(int idx, int digit);
+    /*!Get current coordinates as formatted string.*/
     std::string cord2str();
+    /*!Is equal to Cell::val?*/
     bool isEq(int dig) { return (this->val == dig); };
+    /*!Is cell unknown?*/
     bool isGap() { return (this->val == 0); };
-    //length of cands set
+    /*!Get length of cands set.*/
     const int lc() { return (int)this->candidates.data.size(); };
 };
 
+/*!
+    SudokuBoard represents the whole board and comprises all 81 cells of type Cell. The class additionally includes methods for collecting and updating candidates as well as solving techniques.
+
+    Use SudokuBoard::solve to find the solution of the current quiz. The algorithm iteratively applies all implemented techniques to each cell. The methods SudokuBoard::print and SudokuBoard::printSolvingSteps print the resulting board and all effective solving steps.
+*/
 class SudokuBoard
 {
 private:
