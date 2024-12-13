@@ -11,7 +11,9 @@
 */
 struct CandSet
 {
+private:
     std::set<int> data;
+public:
     /*! Creates an empty candidate container. After creation, the objects internal data variable has size 0.*/
     CandSet() {};
     /*! Inserts a specific candidate number into the list.
@@ -91,13 +93,18 @@ struct Cell
     /*!Is cell unknown?*/
     bool isGap() { return (this->val == 0); };
     /*!Get length of cands set.*/
-    const int lc() { return (int)this->candidates.data.size(); };
+    const int lc() { return this->candidates.size(); };
 };
 
 /*!
     SudokuBoard represents the whole board and comprises all 81 cells of type Cell. The class additionally includes methods for collecting and updating candidates as well as solving techniques.
 
     Use SudokuBoard::solve to find the solution of the current quiz. The algorithm iteratively applies all implemented techniques to each cell. The methods SudokuBoard::print and SudokuBoard::printSolvingSteps print the resulting board and all effective solving steps.
+
+    The first step of solving is to collect all candidates in empty cells. For this, SudokuBoard::solve calls SudokuBoard::collectCands. For each empty cell SudokuBoard::collectCands checks if a digit between 1 and 9 is missing in current row, column and block by calling helper functions SudokuBoard::isInRow, SudokuBoard::isInCol, SudokuBoard::isInBlock.
+
+    The next step is the strategic solving. Here the approach of the implemented techniques depends on whether we have only one or more candidates in the list. If there is a naked single or a hidden single, we'll obtain a candidate set with only one entry. Thus, Cell::val can directly be set and the found digit can be removed from all candidate sets in same row, column and subblock. The process of setting Cell::val and updating the corresponding row, column or block is condensed in SudokuBoard::setFinalValue.
+    All other solving techniques are used to piecewise reduce the CandSet by considering logic patterns and dependencies. Elimination either covers the own CandSet or the sets in neighborhood. In order to check if an elimination was successful in a row, column or block sub-structure, the algorithm utilises SudokuBoard::updateCandsInRow, SudokuBoard::updateCandsInRow and SudokuBoard::updateCandsInRow. Only if all existing candidate sets can be reduced to size 1 the Sudoku solver can give a complete solution.
 */
 class SudokuBoard
 {
