@@ -24,12 +24,19 @@ string CandSet::cand2str()
         return "{}";
     }
     string res = "{";
+    auto ci = this->data.begin();
     for (int k = 0; k < data.size(); k++)
     {
-        auto ci = this->data.begin();
-        advance(ci, k);
         res += to_string(*ci);
-        res += ((k == data.size() - 1) ? "}" : ", ");
+        if (k != data.size() - 1)
+        {
+            res += ", ";
+            advance(ci, 1);
+        }
+        else
+        {
+            res += "}";
+        }
     }
     return res;
 }
@@ -532,18 +539,15 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
     {
         return false;
     }
-    CandSet allOtherCands, t, tt;
+    CandSet allOtherCands, t, commonC;
     for (int r = row + 1; r < 9; r++)
     {
         for (int c = col + 1; c < 9; c++)
         {
             if (!(at(row, c).isGap() && at(r, col).isGap() && at(r, c).isGap())) continue;
-            t = at(row, col).candidates;
-            t = t && at(row, c).candidates;
-            t = t && at(r, col).candidates;
-            t = t && at(r, c).candidates;
+            commonC = at(row, col).candidates && at(row, c).candidates && at(r, col).candidates && at(r, c).candidates;
             //check if the x pattern has a common candidate
-            if (t.size() == 0) continue;
+            if (commonC.size() == 0) continue;
             //check conditions for x-wing column-wise
             allOtherCands.clear();
             for (int j = 0; j < 9; j++)
@@ -554,12 +558,12 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
                     allOtherCands += at(r, j).candidates;
                 }
             }
-            tt = t - allOtherCands;
+            t = commonC - allOtherCands;
             bool stepReducedCands = false;
-            if (tt.size() == 1)
+            if (t.size() == 1)
             {
-                stepReducedCands |= updateCandsInCol(col, vector<int>{row, r}, tt);
-                stepReducedCands |= updateCandsInCol(c, vector<int>{row, r}, tt);
+                stepReducedCands |= updateCandsInCol(col, vector<int>{row, r}, t);
+                stepReducedCands |= updateCandsInCol(c, vector<int>{row, r}, t);
                 appendSolvStep(row, col, "column-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
                 if (stepReducedCands) return true;
             }
@@ -573,12 +577,12 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
                     allOtherCands += at(i, c).candidates;
                 }
             }
-            tt = t - allOtherCands;
+            t = commonC - allOtherCands;
             stepReducedCands = false;
-            if (tt.size() == 1)
+            if (t.size() == 1)
             {
-                stepReducedCands |= updateCandsInRow(row, vector<int>{col, c}, tt);
-                stepReducedCands |= updateCandsInRow(r, vector<int>{col, c}, tt);
+                stepReducedCands |= updateCandsInRow(row, vector<int>{col, c}, t);
+                stepReducedCands |= updateCandsInRow(r, vector<int>{col, c}, t);
                 appendSolvStep(row, col, "row-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
                 if (stepReducedCands) return true;
             }
@@ -751,11 +755,11 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     return false;
 }
 
-void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int col1, int color)
+bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int col1, int color)
 {
     if (at(row, col).lc() != 2)
     {
-        return;
+        return false;
     }
     assert(color == 0 || color == 1);
     CandSet candPair = at(row, col).candidates;
@@ -786,10 +790,11 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                 {
                     assert(at(r, col1).pairColor == -1);
                     assert(at(row1, c).pairColor == -1);
-                    bool stepReducedCands = at(r, col1).candidates.remove(candPair);
-                    appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", stepReducedCands);
-                    stepReducedCands = at(row1, c).candidates.remove(candPair);
-                    appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", stepReducedCands);
+                    bool step1ReducedCands = at(r, col1).candidates.remove(candPair);
+                    appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
+                    bool step2ReducedCands = at(row1, c).candidates.remove(candPair);
+                    appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step2ReducedCands);
+                    if (step1ReducedCands || step2ReducedCands) return true;
                 }
                 //determine candPair by a Naked Pair that has only one candidate in common
                 if (r != row1 && c != col1 && at(r, c).pairColor == color)
@@ -806,6 +811,7 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                             at(r, c).candidates = t2;
                             appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
                             appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                            return true;
                         }
                     }
                     for (int j = 0; j < 9; j++)
@@ -820,6 +826,7 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                             at(r, c).candidates = t2;
                             appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
                             appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                            return true;
                         }
                     }
                 }
@@ -858,24 +865,24 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
         Cell* nextCell = &at(currCell->row, idx);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
         {
-            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
         }
         nextCell = &at(idx, currCell->col);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
         {
-            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
         }
         nextCell = &atBlock(currCell->blk, idx);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
         {
-            checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
         }
         if (numLeftCellsInBlk > 1 && relCol > -1 && !(idx >= currCell->rowBlkPos && idx < currCell->rowBlkPos + 3))
         {
             nextCell = &at(idx, relCol);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
-                checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
+                return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
             }
         }
         if (numLeftCellsInBlk > 1 && relRow > -1 && !(idx >= currCell->colBlkPos && idx < currCell->colBlkPos + 3))
@@ -883,10 +890,11 @@ void SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
             nextCell = &at(relRow, idx);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
-                checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
+                return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
             }
         }
     }
+    return false;
 }
 
 void SudokuBoard::applyStrategies()

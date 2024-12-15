@@ -5,7 +5,7 @@
 /*!
     CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.
 
-    CandSet::data is a std::set-container for storing all possible candidates. Internally the data structure is an std::set<int>.
+    CandSet::data is an internal container for storing all possible candidates. It's of type std::set<int>.
 
     To simplify coding, several operators are overloaded in this class. With CandSet it's possible to use =, ==, !=, -, +=, -=, || and &&. The binary || operator calculates the union between two CandSets while the && operator takes the intersection between the left and right operand. The assignment(=) creates a copy of the source.
 */
@@ -138,7 +138,7 @@ public:
     bool checkCellForXWing(int row, int col);
     bool checkCellForXYWing(int row, int col);
     bool checkCellForLockedCandsInBlocks(int row, int col);
-    void checkForIntersectingColorPairs(int row, int col, int row1 = -1, int col1 = -1, int color = 0);
+    bool checkForIntersectingColorPairs(int row, int col, int row1 = -1, int col1 = -1, int color = 0);
     void applyStrategies();
     bool solve(int numIterations = INT_MAX);
 };
