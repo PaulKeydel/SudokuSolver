@@ -2,6 +2,7 @@
 \usepackage[margin=1.3in]{geometry}
 \usepackage{tikz}
 \usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
 
 \newcommand{\cand}[1]{\tiny \begin{tabular}{l} {#1}\\~\\~ \end{tabular}}
 \newcommand{\candg}[1]{\tiny \begin{tabular}{l} \colorbox{green}{#1}\\~\\~ \end{tabular}}
@@ -22,6 +23,9 @@
 }
     
 \begin{document}
+
+\tableofcontents
+
 \section{Naked Singles}
 \sudoku{
     , , , ,\val{5}, , , , ,

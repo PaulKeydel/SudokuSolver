@@ -13,7 +13,8 @@ This C++ program can solve Sudokus by applying human strategies. A simple text-b
 * XY-wings
 * Colored pairs
 
-For further descriptions and illustrations see https://www.sudoku9x9.com/sudoku_solving_techniques.php
+For further descriptions and illustrations see both https://www.sudoku9x9.com/sudoku_solving_techniques.php and my own  [visualizations](https://github.com/PaulKeydel/SudokuSolver/blob/main/doc/solving_techniques.pdf).
+
 
 **How to use the algorithm?** Just compile the project using the makefile (run `make` or `make debug`), execute `./sudoku` in terminal and enter your Sudoku. Please note that the makefile is configured to use the gcc compiler (change if you're on a non-UNIX system).
 
