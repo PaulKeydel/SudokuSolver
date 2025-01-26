@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{report}
 \usepackage[margin=1.3in]{geometry}
 \usepackage{tikz}
 \usepackage{xcolor}
@@ -26,6 +26,25 @@
 
 \tableofcontents
 
+\chapter{About this overview}
+The following sites present the logic used in the SudokuSolver algorithm.
+
+\chapter{Candidate lists and the idea behind implemention}
+In an empty cell, any number is candidate that is not in the entire row, entire column or in the same 3x3-subblock.
+\sudoku{
+    , , , ,\val{5}, , , , ,
+    , , ,\val{2}, ,\val{8}, , , ,
+    , , , , , , , , ,
+    ,\val{6}, ,\cand{4,5,8,9},\cand{2,4},\val{1}, ,\val{7}, ,
+    \val{2}, , ,\cand{5,6,7,8,9},\cand{7},\cand{5,6,7,9},\val{4}, , ,
+    ,\val{9}, ,\val{3},\cand{2,4,7},\cand{2,4,6,7},\val{5}, , ,
+    , , , ,\val{9}, , , , ,
+    , , , ,\val{8}, , , , ,
+    , , , ,\val{6}, , , ,
+}
+Are all empty cells filled with their candidates, the algorithm takes the lists and tries to reduce candidate entries. In this sense, solving means nothing else than candidate elimination until only one last candidate is left. This must be the final digit of the cell. In order to discard invalid candidates from a specific list, a couple of implemented solving strategies use dependencies between cells and check constellations which make candidate entries logically invalid.
+
+\chapter{Solving Techniques}
 \section{Naked Singles}
 \sudoku{
     , , , ,\val{5}, , , , ,
@@ -78,15 +97,15 @@
 \section{Naked Pairs}
 \subsection{In Row}
 \sudoku{
-    , , , , , , , , ,
+    , , , ,\val{2}, , , , ,
     , , , ,\candg{3,4}, , , , ,
     , , , ,\cando{1,3,9}{1,9}, , , , ,
-    , , , , , , , , ,
+    , , , ,\val{5}, , , , ,
     , , , ,\cando{3,7}{7}, , , , ,
-    , , , , , , , , ,
+    , , , ,\val{6}, , , , ,
     , , , ,\candg{3,4}, , , , ,
-    , , , , , , , , ,
-    , , , , , , , ,
+    , , , ,\val{8}, , , , ,
+    , , , ,\cand{1,7,9}, , , ,
 }
 \subsection{In Column}
 \sudoku{
@@ -94,7 +113,7 @@
     , , , , , , , , ,
     , , , , , , , , ,
     , , , , , , , , ,
-    ,\candg{3,4},\cando{1,3,9}{1,9}, ,\cando{3,7}{7}, ,\candg{3,4}, , ,
+    \val{2},\candg{3,4},\cando{1,3,9}{1,9},\val{5},\cando{3,7}{7},\val{6},\candg{3,4},\val{8},\cand{1,7,9},
     , , , , , , , , ,
     , , , , , , , , ,
     , , , , , , , , ,
@@ -105,9 +124,9 @@
     , , , , , , , , ,
     , , , , , , , , ,
     , , , , , , , , ,
-    , , ,\candg{3,4}, , , , , ,
-    , , , ,\cando{3,7}{7}, , , , ,
-    , , , ,\candg{3,4},\cando{1,3,9}{1,9}, , , ,
+    , , ,\candg{3,4},\val{2},\val{5}, , , ,
+    , , ,\cand{1,7,9},\cando{3,7}{7},\val{6}, , , ,
+    , , ,\val{8},\candg{3,4},\cando{1,3,9}{1,9}, , , ,
     , , , , , , , , ,
     , , , , , , , , ,
     , , , , , , , ,
@@ -149,5 +168,53 @@
     , , , , , , , , ,
     , , , , , , , ,
 }
-
+\section{Locked candidates}
+\subsection{Row within block}
+\sudoku{
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , ,\val{2},\val{5},\cand{7,9}, , , ,
+    \cando{1,7,9}{7,9},\val{2},\val{5},\candg{1,3},\candg{1,4},\cand{4,7,9},\val{6},\cando{1,7}{7},\val{8},
+    , , ,\val{6},\val{8},\cand{3,7,9}, , , ,
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , , , , , , ,
+}
+\subsection{Column within block}
+\sudoku{
+    , , , ,\cando{1,7,9}{7,9}, , , , ,
+    , , , ,\val{2}, , , , ,
+    , , , ,\val{5}, , , , ,
+    , , ,\val{6},\candg{1,3},\val{2}, , , ,
+    , , ,\val{8},\candg{1,4},\val{5}, , , ,
+    , , ,\cand{3,7,9},\cand{4,7,9},\cand{7,9}, , , ,
+    , , , ,\val{6}, , , , ,
+    , , , ,\cando{1,7}{7}, , , , ,
+    , , , ,\val{8}, , , ,
+}
+\subsection{Block within row}
+\sudoku{
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , ,\cando{1,4,8,9}{8,9},\val{6},\val{7}, , , ,
+    \val{6},\val{2},\val{3},\candg{1,4},\candg{1,4,5},\candg{1,4,5},\val{7},\val{8},\val{9},
+    , , ,\val{3},\val{2},\cando{1,4,8,9}{8,9}, , , ,
+    , , , , , , , , ,
+    , , , , , , , , ,
+    , , , , , , , ,
+}
+\subsection{Block within row}
+\sudoku{
+    , , , ,\val{6}, , , , ,
+    , , , ,\val{2}, , , , ,
+    , , , ,\val{3}, , , , ,
+    , , ,\val{3},\candg{1,4},\cando{1,4,8,9}{8,9}, , , ,
+    , , ,\val{2},\candg{1,4,5},\val{6}, , , ,
+    , , ,\cando{1,4,8,9}{8,9},\candg{1,4,5},\val{7}, , , ,
+    , , , ,\val{7}, , , , ,
+    , , , ,\val{8}, , , , ,
+    , , , ,\val{9}, , , ,
+}
 \end{document}
