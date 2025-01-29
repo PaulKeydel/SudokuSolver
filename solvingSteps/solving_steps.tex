@@ -1,0 +1,29 @@
+\documentclass{article}
+\usepackage[margin=1.3in]{geometry}
+\usepackage{tikz}
+\usepackage{xcolor}
+
+\newcommand{\cand}[1]{\tiny \begin{tabular}{l} {\parbox{7mm}{#1}}\\~\\~ \end{tabular}}
+\newcommand{\candg}[1]{\tiny \begin{tabular}{l} \colorbox{green}{\parbox{7mm}{#1}}\\~\\~ \end{tabular}}
+\newcommand{\cando}[2]{\tiny \begin{tabular}{l} \colorbox{orange}{#1}\\$\downarrow$\\{#2} \end{tabular}}
+\newcommand{\val}[1]{\huge #1}
+\newcommand{\valg}[1]{\colorbox{green}{\huge #1}}
+\tikzset{thck/.style={blue,line width=2pt},thn/.style={blue,line width=0.5pt}}
+\newcommand{\sudoku}[1]{%
+    \begin{center}\begin{tikzpicture}
+        \draw[thn] (0,0) grid (9,9);
+        \draw[thck,line cap=rect] (0,0) grid[step=3] (9,9);
+        
+        \foreach \n [count=\i from 0] in {#1}{
+            \pgfmathtruncatemacro{\x}{Mod(\i,9)}
+            \pgfmathtruncatemacro{\y}{\i/9}
+            \node[align=left] at (\x+0.5,9-\y-0.5) {\n};
+        }
+    \end{tikzpicture}\end{center}
+}
+    
+\begin{document}
+
+\input{code_steps.tex}
+
+\end{document}

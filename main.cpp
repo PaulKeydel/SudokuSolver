@@ -1,6 +1,5 @@
 #include <curses.h>
 #include <vector>
-//#include <stdlib.h>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -107,6 +106,13 @@ void saveBoardToFile(std::string fname, int* board)
     out.close();
 }
 
+void saveLatexToFile(std::string fname, std::string& srcCode)
+{
+    std::ofstream out(fname);
+    out << srcCode;
+    out.close();
+}
+
 int main(int argc, char *argv[])
 {
     int board[81];
@@ -122,7 +128,8 @@ int main(int argc, char *argv[])
     SudokuBoard sb(board);
     bool solved = sb.solve(1000);
     sb.print();
-    sb.printSolvingSteps();
+    std::string& latexCode = sb.printSolvingSteps();
+    saveLatexToFile("./solvingSteps/code_steps.tex", latexCode);
     std::cout << (solved ? "Solved" : "Not solvable") << std::endl;
     return (int)solved - 1;
 }

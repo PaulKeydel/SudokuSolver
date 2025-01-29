@@ -115,6 +115,20 @@ void SudokuBoard::appendSolvStep(int row, int col, string text, bool bReducedCan
     {
         pair<int, string> p = make_pair(9 * row + col, text);
         solvingSteps.push_back(p);
+        //add latex code
+        latexCode += "\\section{" + text + "}\n";
+        latexCode += "\\sudoku{\n";
+        for (int idx = 0; idx < 81; idx++)
+        {
+            if (idx % 9 == 0) latexCode += "    ";
+            if (9 * row + col == idx && b[idx].lc() == 0) latexCode += "\\valg{" + to_string(b[idx].val) + "}";
+            if (9 * row + col != idx && b[idx].lc() == 0) latexCode += "\\val{" + to_string(b[idx].val) + "}";
+            if (9 * row + col == idx && b[idx].lc() > 0) latexCode += "\\candg" + b[idx].candidates.cand2str();
+            if (9 * row + col != idx && b[idx].lc() > 0) latexCode += "\\cand" + b[idx].candidates.cand2str();
+            if (idx % 9 < 8) latexCode += ", ";
+            if (idx % 9 == 8 && idx / 9 < 8) latexCode += ",\n";
+        }
+        latexCode += "\n}\n";
     }
 }
 
@@ -132,7 +146,7 @@ void SudokuBoard::print()
     }
 }
 
-void SudokuBoard::printSolvingSteps()
+string& SudokuBoard::printSolvingSteps()
 {
     for (int k = 0; k < solvingSteps.size(); k++)
     {
@@ -140,7 +154,8 @@ void SudokuBoard::printSolvingSteps()
         int col = get<0>(solvingSteps.at(k)) % 9;
         string text = get<1>(solvingSteps.at(k));
         cout << "(" << to_string(row) << ", " << to_string(col) << "): " << text << endl;
-    }    
+    }
+    return latexCode;
 }
 
 Cell& SudokuBoard::at(int row, int col)
@@ -928,6 +943,7 @@ bool SudokuBoard::solve(int numIterations)
     //try to solve
     int it_count = 0;
     bool valid = false;
+    latexCode = "";
     while (!valid && (it_count <= numIterations))
     {
         it_count++;

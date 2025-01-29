@@ -112,11 +112,12 @@ private:
     std::array<Cell, 81> b;
     //stuff for list of solving steps
     std::vector<std::pair<int, std::string>> solvingSteps;
+    std::string latexCode;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
 public:
     SudokuBoard(int* board);
     void print();
-    void printSolvingSteps();
+    std::string& printSolvingSteps();
     Cell& at(int row, int col);
     Cell& atBlock(int block, int index);
     bool isInCol(int col, int digit);
