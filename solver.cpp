@@ -950,5 +950,18 @@ bool SudokuBoard::solve(int numIterations)
         applyStrategies();
         valid = this->valid();
     }
+    //add backslashes in Latex code
+    int n = 0;
+    while ((n = latexCode.find(" {", n)) != std::string::npos)
+    {
+        latexCode.replace(n, 2, " \\{");
+        n += 3;
+    }
+    n = 0;
+    while ((n = latexCode.find("} ", n)) != std::string::npos)
+    {
+        latexCode.replace(n, 2, "\\} ");
+        n += 3;
+    }
     return valid;
 }

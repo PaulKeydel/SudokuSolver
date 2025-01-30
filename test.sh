@@ -4,7 +4,7 @@ make
 
 cd testboards
 for filename in *.txt; do
-    ../sudoku "$filename" > /dev/null
+    ( echo n | ../sudoku "$filename" ) > /dev/null
     if [ $? -eq 0 ]
     then
         echo "${filename} ... check"

@@ -106,11 +106,12 @@ void saveBoardToFile(std::string fname, int* board)
     out.close();
 }
 
-void saveLatexToFile(std::string fname, std::string& srcCode)
+void createPdfSolvSteps(std::string& srcCode)
 {
-    std::ofstream out(fname);
+    std::ofstream out("./solvingSteps/code_steps.tex");
     out << srcCode;
     out.close();
+    system("cd solvingSteps && pdflatex solving_steps.tex");
 }
 
 int main(int argc, char *argv[])
@@ -129,7 +130,13 @@ int main(int argc, char *argv[])
     bool solved = sb.solve(1000);
     sb.print();
     std::string& latexCode = sb.printSolvingSteps();
-    saveLatexToFile("./solvingSteps/code_steps.tex", latexCode);
     std::cout << (solved ? "Solved" : "Not solvable") << std::endl;
+    if (solved)
+    {
+        char doLatex;
+        std::cout << "Do you want to create a step-by-step solution as pdf? If yes, type 'y'." << std::endl;
+        std::cin >> doLatex;
+        if (doLatex == 'y') createPdfSolvSteps(latexCode);
+    }
     return (int)solved - 1;
 }
