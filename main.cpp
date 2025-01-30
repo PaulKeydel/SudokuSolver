@@ -111,7 +111,7 @@ void createPdfSolvSteps(std::string& srcCode)
     std::ofstream out("./solvingSteps/code_steps.tex");
     out << srcCode;
     out.close();
-    system("cd solvingSteps && pdflatex solving_steps.tex");
+    system("./makeSolvStep.sh");
 }
 
 int main(int argc, char *argv[])
@@ -130,13 +130,14 @@ int main(int argc, char *argv[])
     bool solved = sb.solve(1000);
     sb.print();
     std::string& latexCode = sb.printSolvingSteps();
-    std::cout << (solved ? "Solved" : "Not solvable") << std::endl;
-    if (solved)
+    std::cout << (solved ? "Solved" : "Not solvable") << std::endl << std::endl;
+
+    char doLatex;
+    std::cout << "Do you want to create a step-by-step solution as pdf? If yes, type 'y'." << std::endl;
+    std::cin >> doLatex;
+    if (doLatex == 'y')
     {
-        char doLatex;
-        std::cout << "Do you want to create a step-by-step solution as pdf? If yes, type 'y'." << std::endl;
-        std::cin >> doLatex;
-        if (doLatex == 'y') createPdfSolvSteps(latexCode);
+        createPdfSolvSteps(latexCode);
     }
     return (int)solved - 1;
 }
