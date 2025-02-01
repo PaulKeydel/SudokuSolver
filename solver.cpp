@@ -253,11 +253,10 @@ bool SudokuBoard::updateCandsInRow(int row, vector<int> excludedPositions, CandS
     bool couldReduce = false;
     for (int j = 0; j < 9; j++)
     {
-        if (find(excludedPositions.begin(), excludedPositions.end(), j) != excludedPositions.end())
+        if (!(find(excludedPositions.begin(), excludedPositions.end(), j) != excludedPositions.end()))
         {
-            continue;
+            couldReduce |= at(row, j).candidates.remove(digits);
         }
-        couldReduce |= at(row, j).candidates.remove(digits);
     }
     return couldReduce;
 }
@@ -267,11 +266,10 @@ bool SudokuBoard::updateCandsInCol(int col, vector<int> excludedPositions, CandS
     bool couldReduce = false;
     for (int i = 0; i < 9; i++)
     {
-        if (find(excludedPositions.begin(), excludedPositions.end(), i) != excludedPositions.end())
+        if (!(find(excludedPositions.begin(), excludedPositions.end(), i) != excludedPositions.end()))
         {
-            continue;
+            couldReduce |= at(i, col).candidates.remove(digits);
         }
-        couldReduce |= at(i, col).candidates.remove(digits);
     }
     return couldReduce;
 }
@@ -281,11 +279,10 @@ bool SudokuBoard::updateCandsInBlock(int blk, vector<int> excludedPositions, Can
     bool couldReduce = false;
     for (int idx = 0; idx < 9; idx++)
     {
-        if (find(excludedPositions.begin(), excludedPositions.end(), idx) != excludedPositions.end())
+        if (!(find(excludedPositions.begin(), excludedPositions.end(), idx) != excludedPositions.end()))
         {
-            continue;
+            couldReduce |= atBlock(blk, idx).candidates.remove(digits);
         }
-        couldReduce |= atBlock(blk, idx).candidates.remove(digits);
     }
     return couldReduce;
 }
@@ -748,7 +745,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         int exBlkIdx = 3 * (at(row, col).blkidx / 3);
         bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 1, exBlkIdx + 2}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block", stepReducedCands);
+        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block-row", stepReducedCands);
         if (stepReducedCands) return true;
     }
     //check block-within-col scenario
@@ -764,7 +761,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         int exBlkIdx = at(row, col).blkidx % 3;
         bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 3, exBlkIdx + 6}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block", stepReducedCands);
+        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block-column", stepReducedCands);
         if (stepReducedCands) return true;
     }
     return false;
@@ -778,71 +775,63 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
     }
     assert(color == 0 || color == 1);
     CandSet candPair = at(row, col).candidates;
-    //reset field
-    if (row1 == -1 && col1 == -1)
-    {
-        for (int r = 0; r < 9; r++)
-        {
-            for (int c = 0; c < 9; c++)
-            {
-                at(r, c).pairColor = -1;
-            }
-        }
-        at(row, col).pairColor = 0;
-    }
-    //set color in current depth and update cand list
-    else
+    if (row1 >= 0 && col1 >= 0)
     {
         at(row1, col1).pairColor = color;
         assert(at(row1, col1).lc() == 2);
-        //try to update
-        for (int r = 0; r < 9; r++)
+    }
+    for (int r = 0; r < 9; r++)
+    {
+        for (int c = 0; c < 9; c++)
         {
-            for (int c = 0; c < 9; c++)
+            //initialize recursion
+            if (row1 == -1 && col1 == -1)
             {
-                //update cand list if we have an intersecting color pair
-                if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
+                at(r, c).pairColor = (r == row && c == col) ? 0 : -1;
+                continue;
+            }
+            //update cand list if we have an intersecting color pair
+            if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
+            {
+                assert(at(r, col1).pairColor == -1);
+                assert(at(row1, c).pairColor == -1);
+                bool step1ReducedCands = at(r, col1).candidates.remove(candPair);
+                appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
+                bool step2ReducedCands = at(row1, c).candidates.remove(candPair);
+                appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step2ReducedCands);
+                if (step1ReducedCands || step2ReducedCands) return true;
+            }
+            //determine candPair by a Naked Pair that has only one candidate in common
+            if (r != row1 && c != col1 && at(r, c).pairColor == color)
+            {
+                for (int i = 0; i < 9; i++)
                 {
-                    assert(at(r, col1).pairColor == -1);
-                    assert(at(row1, c).pairColor == -1);
-                    bool step1ReducedCands = at(r, col1).candidates.remove(candPair);
-                    appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
-                    bool step2ReducedCands = at(row1, c).candidates.remove(candPair);
-                    appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step2ReducedCands);
-                    if (step1ReducedCands || step2ReducedCands) return true;
-                }
-                //determine candPair by a Naked Pair that has only one candidate in common
-                if (r != row1 && c != col1 && at(r, c).pairColor == color)
-                {
-                    for (int i = 0; i < 9; i++)
+                    if (i == row1 || i == r) continue;
+                    CandSet t0 = at(i, col1).candidates;
+                    CandSet t1 = at(i, c).candidates;
+                    CandSet t2 = candPair - t0;
+                    if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
                     {
-                        if (i == row1 || i == r) continue;
-                        CandSet t0 = at(i, col1).candidates;
-                        CandSet t1 = at(i, c).candidates;
-                        CandSet t2 = candPair - t0;
-                        if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
-                        {
-                            at(row1, col1).candidates = t2;
-                            at(r, c).candidates = t2;
-                            appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
-                            appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
-                            return true;
-                        }
+                        at(row1, col1).candidates = t2;
+                        at(r, c).candidates = t2;
+                        appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                        appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                        return true;
                     }
-                    for (int j = 0; j < 9; j++)
+                }
+                for (int j = 0; j < 9; j++)
+                {
+                    if (j == col1 || j == c) continue;
+                    CandSet t0 = at(row1, j).candidates;
+                    CandSet t1 = at(r, j).candidates;
+                    CandSet t2 = candPair - t0;
+                    if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
                     {
-                        if (j == col1 || j == c) continue;
-                        CandSet t0 = at(row1, j).candidates;
-                        CandSet t1 = at(r, j).candidates;
-                        CandSet t2 = candPair - t0;
-                        if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
-                        {
-                            at(row1, col1).candidates = t2;
-                            at(r, c).candidates = t2;
-                            appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
-                            appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
-                            return true;
-                        }
+                        at(row1, col1).candidates = t2;
+                        at(r, c).candidates = t2;
+                        appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                        appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                        return true;
                     }
                 }
             }
@@ -951,14 +940,14 @@ bool SudokuBoard::solve(int numIterations)
         valid = this->valid();
     }
     //add backslashes in Latex code
-    int n = 0;
-    while ((n = latexCode.find(" {", n)) != std::string::npos)
+    size_t n = 0;
+    while ((n = latexCode.find(" {", n)) != string::npos)
     {
         latexCode.replace(n, 2, " \\{");
         n += 3;
     }
     n = 0;
-    while ((n = latexCode.find("} ", n)) != std::string::npos)
+    while ((n = latexCode.find("} ", n)) != string::npos)
     {
         latexCode.replace(n, 2, "\\} ");
         n += 3;
