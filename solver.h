@@ -1,6 +1,7 @@
 #include <set>
 #include <array>
 #include <vector>
+#include <unordered_set>
 
 /*!
     CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.
@@ -114,6 +115,7 @@ private:
     std::vector<std::pair<int, std::string>> solvingSteps;
     std::string latexCode;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
+    void copyBoard(const std::array<Cell, 81>& src, std::array<Cell, 81>& dest);
 public:
     SudokuBoard(int* board);
     void print();
@@ -123,7 +125,7 @@ public:
     bool isInCol(int col, int digit);
     bool isInRow(int row, int digit);
     bool isInBlock(int block, int digit);
-    bool valid();
+    bool isSolved();
     //methods for managing candidate list
     void collectCands();
     bool updateCandsInRow(int row, std::vector<int> excludedPositions, CandSet digits);
@@ -131,15 +133,16 @@ public:
     bool updateCandsInBlock(int blk, std::vector<int> excludedPositions, CandSet digits);
     void setFinalValue(int row, int col);
     //solving techniques
-    bool checkCellForNakedSingle(int row, int col);
-    bool checkCellForHiddenSingle(int row, int col);
-    bool checkCellForNakedPair(int row, int col);
-    bool checkCellForHiddenPair(int row, int col);
-    bool checkCellForNakedTriplet(int row, int col);
-    bool checkCellForXWing(int row, int col);
-    bool checkCellForXYWing(int row, int col);
-    bool checkCellForLockedCandsInBlocks(int row, int col);
-    bool checkForIntersectingColorPairs(int row, int col, int row1 = -1, int col1 = -1, int color = 0);
-    void applyStrategies();
+    bool checkCellForNakedSingle(int row, int col, std::string prefix);
+    bool checkCellForHiddenSingle(int row, int col, std::string prefix);
+    bool checkCellForNakedPair(int row, int col, std::string prefix);
+    bool checkCellForHiddenPair(int row, int col, std::string prefix);
+    bool checkCellForNakedTriplet(int row, int col, std::string prefix);
+    bool checkCellForXWing(int row, int col, std::string prefix);
+    bool checkCellForXYWing(int row, int col, std::string prefix);
+    bool checkCellForLockedCandsInBlocks(int row, int col, std::string prefix);
+    bool checkForIntersectingColorPairs(int row, int col, std::string prefix, int row1 = -1, int col1 = -1, int color = 0);
+    void applyStrategies(std::string prefix = "");
+    bool tryForcingChain(int numIterations);
     bool solve(int numIterations = INT_MAX);
 };

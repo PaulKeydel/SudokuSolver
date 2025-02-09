@@ -132,6 +132,22 @@ void SudokuBoard::appendSolvStep(int row, int col, string text, bool bReducedCan
     }
 }
 
+void SudokuBoard::copyBoard(const array<Cell, 81>& src, array<Cell, 81>& dest)
+{
+    for (int idx = 0; idx < 81; idx++)
+    {
+        dest[idx].val        = src[idx].val;
+        dest[idx].row        = src[idx].row;
+        dest[idx].col        = src[idx].col;
+        dest[idx].blk        = src[idx].blk;
+        dest[idx].blkidx     = src[idx].blkidx;
+        dest[idx].rowBlkPos  = src[idx].rowBlkPos;
+        dest[idx].colBlkPos  = src[idx].colBlkPos;
+        dest[idx].pairColor  = src[idx].pairColor;
+        dest[idx].candidates = src[idx].candidates;
+    }
+}
+
 void SudokuBoard::print()
 {
     for (int row = 0; row < 9; row++)
@@ -213,7 +229,7 @@ bool SudokuBoard::isInBlock(int block, int digit)
     return found;
 }
 
-bool SudokuBoard::valid()
+bool SudokuBoard::isSolved()
 {
     for (int i = 0; i < 81; i++)
     {
@@ -303,18 +319,18 @@ void SudokuBoard::setFinalValue(int row, int col)
     at(row, col).candidates.erase(newDigit);
 }
 
-bool SudokuBoard::checkCellForNakedSingle(int row, int col)
+bool SudokuBoard::checkCellForNakedSingle(int row, int col, string prefix)
 {
     if (at(row, col).lc() != 1)
     {
         return false;
     }
     setFinalValue(row, col);
-    appendSolvStep(row, col, "Naked Single", true);
+    appendSolvStep(row, col, prefix + "Naked Single", true);
     return true;
 }
 
-bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
+bool SudokuBoard::checkCellForHiddenSingle(int row, int col, string prefix)
 {
     if (at(row, col).lc() < 2)
     {
@@ -332,7 +348,7 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     {
         at(row, col).candidates -= allOtherCands;
         setFinalValue(row, col);
-        appendSolvStep(row, col, "Hidden Single", true);
+        appendSolvStep(row, col, prefix + "Hidden Single", true);
         return true;
     }
     //search along col and collect all other candidates
@@ -347,7 +363,7 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     {
         at(row, col).candidates -= allOtherCands;
         setFinalValue(row, col);
-        appendSolvStep(row, col, "Hidden Single", true);
+        appendSolvStep(row, col, prefix + "Hidden Single", true);
         return true;
     }
     //search within block and collect all other candidates
@@ -363,13 +379,13 @@ bool SudokuBoard::checkCellForHiddenSingle(int row, int col)
     {
         at(row, col).candidates -= allOtherCands;
         setFinalValue(row, col);
-        appendSolvStep(row, col, "Hidden Single", true);
+        appendSolvStep(row, col, prefix + "Hidden Single", true);
         return true;
     }
     return false;
 }
 
-bool SudokuBoard::checkCellForNakedPair(int row, int col)
+bool SudokuBoard::checkCellForNakedPair(int row, int col, string prefix)
 {
     if (at(row, col).lc() != 2)
     {
@@ -383,7 +399,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         if (c != col && at(row, c).candidates == candPair)
         {
             bool stepReducedCands = updateCandsInRow(row, vector<int>{col, c}, candPair);
-            appendSolvStep(row, col, "Naked Pair with cell " + at(row, c).cord2str(), stepReducedCands);
+            appendSolvStep(row, col, prefix + "Naked Pair with cell " + at(row, c).cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same col
@@ -391,7 +407,7 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         if (r != row && at(r, col).candidates == candPair)
         {
             bool stepReducedCands = updateCandsInCol(col, vector<int>{row, r}, candPair);
-            appendSolvStep(row, col, "Naked Pair with cell " + at(r, col).cord2str(), stepReducedCands);
+            appendSolvStep(row, col, prefix + "Naked Pair with cell " + at(r, col).cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same block
@@ -400,14 +416,14 @@ bool SudokuBoard::checkCellForNakedPair(int row, int col)
         if (blkIdx != at(row, col).blkidx && atBlock(blk, blkIdx).candidates == candPair)
         {
             bool stepReducedCands = updateCandsInBlock(blk, vector<int>{at(row, col).blkidx, blkIdx}, candPair);
-            appendSolvStep(row, col, "Naked Pair with cell " + atBlock(blk, blkIdx).cord2str(), stepReducedCands);
+            appendSolvStep(row, col, prefix + "Naked Pair with cell " + atBlock(blk, blkIdx).cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
     }
     return false;
 }
 
-bool SudokuBoard::checkCellForHiddenPair(int row, int col)
+bool SudokuBoard::checkCellForHiddenPair(int row, int col, string prefix)
 {
     if (at(row, col).lc() < 3)
     {
@@ -433,7 +449,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             {
                 at(row, col).candidates = t;
                 at(row, c).candidates = t;
-                appendSolvStep(row, col, "Hidden Pair " + t.cand2str() + " with cell " + at(row, c).cord2str(), true);
+                appendSolvStep(row, col, prefix + "Hidden Pair " + t.cand2str() + " with cell " + at(row, c).cord2str(), true);
                 return true;
             }
         }
@@ -454,7 +470,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             {
                 at(row, col).candidates = t;
                 at(r, col).candidates = t;
-                appendSolvStep(row, col, "Hidden Pair " + t.cand2str() + " with cell " + at(r, col).cord2str(), true);
+                appendSolvStep(row, col, prefix + "Hidden Pair " + t.cand2str() + " with cell " + at(r, col).cord2str(), true);
                 return true;
             }
         }
@@ -476,7 +492,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
             {
                 at(row, col).candidates = t;
                 atBlock(blk, blkIdx).candidates = t;
-                appendSolvStep(row, col, "Hidden Pair " + t.cand2str() + " with cell " + atBlock(blk, blkIdx).cord2str(), true);
+                appendSolvStep(row, col, prefix + "Hidden Pair " + t.cand2str() + " with cell " + atBlock(blk, blkIdx).cord2str(), true);
                 return true;
             }
         }
@@ -484,7 +500,7 @@ bool SudokuBoard::checkCellForHiddenPair(int row, int col)
     return false;
 }
 
-bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
+bool SudokuBoard::checkCellForNakedTriplet(int row, int col, string prefix)
 {
     if (at(row, col).lc() != 2 && at(row, col).lc() != 3)
     {
@@ -505,7 +521,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInRow(row, vector<int>{col, c0, c1}, u);
-                    appendSolvStep(row, col, "Naked Triplet in row with cell " + at(row, c0).cord2str() + " and cell " + at(row, c1).cord2str(), stepReducedCands);
+                    appendSolvStep(row, col, prefix + "Naked Triplet in row with cell " + at(row, c0).cord2str() + " and cell " + at(row, c1).cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
@@ -520,7 +536,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInCol(col, vector<int>{row, r0, r1}, u);
-                    appendSolvStep(row, col, "Naked Triplet in col with cell " + at(r0, col).cord2str() + " and cell " + at(r1, col).cord2str(), stepReducedCands);
+                    appendSolvStep(row, col, prefix + "Naked Triplet in col with cell " + at(r0, col).cord2str() + " and cell " + at(r1, col).cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
@@ -536,7 +552,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInBlock(blk, vector<int>{at(row, col).blkidx, blkIdx0, blkIdx1}, u);
-                    appendSolvStep(row, col, "Naked Triplet in block with cell " + atBlock(blk, blkIdx0).cord2str() + " and cell " + atBlock(blk, blkIdx1).cord2str(), stepReducedCands);
+                    appendSolvStep(row, col, prefix + "Naked Triplet in block with cell " + atBlock(blk, blkIdx0).cord2str() + " and cell " + atBlock(blk, blkIdx1).cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
@@ -545,7 +561,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col)
     return false;
 }
 
-bool SudokuBoard::checkCellForXWing(int row, int col)
+bool SudokuBoard::checkCellForXWing(int row, int col, string prefix)
 {
     if (!at(row, col).isGap())
     {
@@ -576,7 +592,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 stepReducedCands |= updateCandsInCol(col, vector<int>{row, r}, t);
                 stepReducedCands |= updateCandsInCol(c, vector<int>{row, r}, t);
-                appendSolvStep(row, col, "column-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
+                appendSolvStep(row, col, prefix + "column-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
                 if (stepReducedCands) return true;
             }
             //check conditions for x-wing row-wise
@@ -595,7 +611,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
             {
                 stepReducedCands |= updateCandsInRow(row, vector<int>{col, c}, t);
                 stepReducedCands |= updateCandsInRow(r, vector<int>{col, c}, t);
-                appendSolvStep(row, col, "row-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
+                appendSolvStep(row, col, prefix + "row-wise X-Wing with diag cell" + at(r, c).cord2str(), stepReducedCands);
                 if (stepReducedCands) return true;
             }
         }
@@ -603,7 +619,7 @@ bool SudokuBoard::checkCellForXWing(int row, int col)
     return false;
 }
 
-bool SudokuBoard::checkCellForXYWing(int row, int col)
+bool SudokuBoard::checkCellForXYWing(int row, int col, string prefix)
 {
     if (at(row, col).lc() != 2)
     {
@@ -625,7 +641,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
             if (t0.size() == 1 && t1.size() == 1 && t2.size() == 1 && t0 != t1 && t2 != t0 && t2 != t1)
             {
                 bool stepReducedCands = at(r, c).candidates.remove(t2);
-                appendSolvStep(row, col, "XY wing", stepReducedCands);
+                appendSolvStep(row, col, prefix + "XY wing", stepReducedCands);
                 if (stepReducedCands) return true;
             }
         }
@@ -653,7 +669,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
                 {
                     stepReducedCands |= at(row, c1).candidates.remove(t2);
                 }
-                appendSolvStep(row, col, "XY wing in block-row scenario", stepReducedCands);
+                appendSolvStep(row, col, prefix + "XY wing in block-row scenario", stepReducedCands);
                 if (stepReducedCands) return true;
             }
         }
@@ -681,7 +697,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
                 {
                     stepReducedCands |= at(r1, col).candidates.remove(t2);
                 }
-                appendSolvStep(row, col, "XY wing in block-column scenario", stepReducedCands);
+                appendSolvStep(row, col, prefix + "XY wing in block-column scenario", stepReducedCands);
                 if (stepReducedCands) return true;
             }
         }
@@ -689,7 +705,7 @@ bool SudokuBoard::checkCellForXYWing(int row, int col)
     return false;
 }
 
-bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
+bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col, string prefix)
 {
     if (at(row, col).lc() < 2)
     {
@@ -712,7 +728,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     if (lockedCands.size() > 0)
     {
         bool stepReducedCands = updateCandsInRow(row, vector<int>{colstart, colstart + 1, colstart + 2}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in row", stepReducedCands);
+        appendSolvStep(row, col, prefix + "Cands " + lockedCands.cand2str() + " are locked in row", stepReducedCands);
         if (stepReducedCands) return true;
     }
     //check col-within-block scenario
@@ -729,7 +745,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     if (lockedCands.size() > 0)
     {
         bool stepReducedCands = updateCandsInCol(col, vector<int>{rowstart, rowstart + 1, rowstart + 2}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in col", stepReducedCands);
+        appendSolvStep(row, col, prefix + "Cands " + lockedCands.cand2str() + " are locked in col", stepReducedCands);
         if (stepReducedCands) return true;
     }
     //check block-within-row scenario
@@ -745,7 +761,7 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         int exBlkIdx = 3 * (at(row, col).blkidx / 3);
         bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 1, exBlkIdx + 2}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block-row", stepReducedCands);
+        appendSolvStep(row, col, prefix + "Cands " + lockedCands.cand2str() + " are locked in block-row", stepReducedCands);
         if (stepReducedCands) return true;
     }
     //check block-within-col scenario
@@ -761,13 +777,13 @@ bool SudokuBoard::checkCellForLockedCandsInBlocks(int row, int col)
     {
         int exBlkIdx = at(row, col).blkidx % 3;
         bool stepReducedCands = updateCandsInBlock(blk, vector<int>{exBlkIdx, exBlkIdx + 3, exBlkIdx + 6}, lockedCands);
-        appendSolvStep(row, col, "Cands " + lockedCands.cand2str() + " are locked in block-column", stepReducedCands);
+        appendSolvStep(row, col, prefix + "Cands " + lockedCands.cand2str() + " are locked in block-column", stepReducedCands);
         if (stepReducedCands) return true;
     }
     return false;
 }
 
-bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int col1, int color)
+bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, string prefix, int row1, int col1, int color)
 {
     if (at(row, col).lc() != 2)
     {
@@ -796,9 +812,9 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                 assert(at(r, col1).pairColor == -1);
                 assert(at(row1, c).pairColor == -1);
                 bool step1ReducedCands = at(r, col1).candidates.remove(candPair);
-                appendSolvStep(r, col1, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
+                appendSolvStep(r, col1, prefix + "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
                 bool step2ReducedCands = at(row1, c).candidates.remove(candPair);
-                appendSolvStep(row1, c, "Cand pair " + candPair.cand2str() + " removed due to colored pair", step2ReducedCands);
+                appendSolvStep(row1, c, prefix + "Cand pair " + candPair.cand2str() + " removed due to colored pair", step2ReducedCands);
                 if (step1ReducedCands || step2ReducedCands) return true;
             }
             //determine candPair by a Naked Pair that has only one candidate in common
@@ -814,8 +830,8 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                     {
                         at(row1, col1).candidates = t2;
                         at(r, c).candidates = t2;
-                        appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
-                        appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                        appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                        appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
                         return true;
                     }
                 }
@@ -829,8 +845,8 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
                     {
                         at(row1, col1).candidates = t2;
                         at(r, c).candidates = t2;
-                        appendSolvStep(row1, col1, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
-                        appendSolvStep(r, c, "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                        appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                        appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
                         return true;
                     }
                 }
@@ -869,24 +885,24 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
         Cell* nextCell = &at(currCell->row, idx);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
         {
-            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, prefix, nextCell->row, nextCell->col, nextColor);
         }
         nextCell = &at(idx, currCell->col);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
         {
-            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, prefix, nextCell->row, nextCell->col, nextColor);
         }
         nextCell = &atBlock(currCell->blk, idx);
         if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
         {
-            return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, nextColor);
+            return checkForIntersectingColorPairs(row, col, prefix, nextCell->row, nextCell->col, nextColor);
         }
         if (numLeftCellsInBlk > 1 && relCol > -1 && !(idx >= currCell->rowBlkPos && idx < currCell->rowBlkPos + 3))
         {
             nextCell = &at(idx, relCol);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
-                return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
+                return checkForIntersectingColorPairs(row, col, prefix, nextCell->row, nextCell->col, color);
             }
         }
         if (numLeftCellsInBlk > 1 && relRow > -1 && !(idx >= currCell->colBlkPos && idx < currCell->colBlkPos + 3))
@@ -894,35 +910,106 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, int row1, int
             nextCell = &at(relRow, idx);
             if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
             {
-                return checkForIntersectingColorPairs(row, col, nextCell->row, nextCell->col, color);
+                return checkForIntersectingColorPairs(row, col, prefix, nextCell->row, nextCell->col, color);
             }
         }
     }
     return false;
 }
 
-void SudokuBoard::applyStrategies()
+void SudokuBoard::applyStrategies(string prefix)
 {
     for (int row = 0; row < 9; row++)
     {
         for (int col = 0; col < 9; col++)
         {
-            if (at(row, col).isGap() == false)
+            if (at(row, col).lc() == 0)
             {
-                assert(at(row, col).lc() == 0);
+                //step over if there are no candidates
                 continue;
             }
-            if (checkCellForNakedSingle(row, col)) continue;
-            if (checkCellForHiddenSingle(row, col)) continue;
-            bool tryNext = !checkCellForNakedPair(row, col);
-            if (tryNext) tryNext = !checkCellForHiddenPair(row, col);
-            if (tryNext) tryNext = !checkCellForLockedCandsInBlocks(row, col);
-            if (tryNext) tryNext = !checkCellForNakedTriplet(row, col);
-            if (tryNext) tryNext = !checkCellForXWing(row, col);
-            if (tryNext) tryNext = !checkCellForXYWing(row, col);
-            if (tryNext) checkForIntersectingColorPairs(row, col);
+            if (checkCellForNakedSingle(row, col, prefix)) continue;
+            if (checkCellForHiddenSingle(row, col, prefix)) continue;
+            bool tryNext = !checkCellForNakedPair(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForHiddenPair(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForLockedCandsInBlocks(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForNakedTriplet(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForXWing(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForXYWing(row, col, prefix);
+            if (tryNext) checkForIntersectingColorPairs(row, col, prefix);
         }
     }
+}
+
+bool SudokuBoard::tryForcingChain(int numIterations)
+{
+    array<Cell, 81> origBoard;
+    copyBoard(b, origBoard);
+    string origLatexCode = latexCode;
+    int it_count;
+    for (int r = 0; r < 9; r++)
+    {
+        for (int c = 0; c < 9; c++)
+        {
+            if (origBoard[9 * r + c].lc() != 2)
+            {
+                continue;
+            }
+            bool bInvalid0 = false;
+            bool bInvalid1 = false;
+            const int rmCand0 = *origBoard[9 * r + c].candidates.begin();
+            const int rmCand1 = *next(origBoard[9 * r + c].candidates.begin());
+            //use first candidate as solution
+            copyBoard(origBoard, b);
+            latexCode = origLatexCode;
+            at(r, c).candidates.erase(rmCand0);
+            setFinalValue(r, c);
+            it_count = 0;
+            while (!bInvalid0 && (it_count <= numIterations))
+            {
+                it_count++;
+                applyStrategies("Remove cand " + to_string(rmCand0) + " from cell " + at(r, c).cord2str() + ": ");
+                for (int i = 0; i < 81; i++)
+                {
+                    bInvalid0 |= (b.at(i).isGap() && b.at(i).lc() == 0);
+                }
+            }
+            bool bSolved0 = isSolved();
+            string latexCode0 = latexCode;
+            //use second candidate as solution
+            copyBoard(origBoard, b);
+            latexCode = origLatexCode;
+            at(r, c).candidates.erase(rmCand1);
+            setFinalValue(r, c);
+            it_count = 0;
+            while (!bInvalid1 && (it_count <= numIterations))
+            {
+                it_count++;
+                applyStrategies("Remove cand " + to_string(rmCand1) + " from cell " + at(r, c).cord2str() + ": ");
+                for (int i = 0; i < 81; i++)
+                {
+                    bInvalid1 |= (b.at(i).isGap() && b.at(i).lc() == 0);
+                }
+            }
+            bool bSolved1 = isSolved();
+            string latexCode1 = latexCode;
+            //check both results
+            if ((bInvalid0 && bSolved1) || (bInvalid1 && bSolved0))
+            {
+                copyBoard(origBoard, b);
+                latexCode = bSolved0 ? latexCode1 : latexCode0;
+                at(r, c).candidates.erase(bSolved0 ? rmCand0 : rmCand1);
+                setFinalValue(r, c);
+                appendSolvStep(r, c, "Forcing chain", true);
+                while (!isSolved())
+                {
+                    applyStrategies();
+                }
+                return true;
+            }
+        }
+    }
+    return false;
 }
     
 bool SudokuBoard::solve(int numIterations)
@@ -931,13 +1018,18 @@ bool SudokuBoard::solve(int numIterations)
     collectCands();
     //try to solve
     int it_count = 0;
-    bool valid = false;
+    bool bIsSolved = false;
     latexCode = "";
-    while (!valid && (it_count <= numIterations))
+    while (!bIsSolved && (it_count <= numIterations))
     {
         it_count++;
         applyStrategies();
-        valid = this->valid();
+        bIsSolved = isSolved();
+    }
+    //forcing chain
+    if (!bIsSolved)
+    {
+        bIsSolved = tryForcingChain(numIterations);
     }
     //add backslashes in Latex code
     size_t n = 0;
@@ -952,5 +1044,5 @@ bool SudokuBoard::solve(int numIterations)
         latexCode.replace(n, 2, "\\} ");
         n += 3;
     }
-    return valid;
+    return bIsSolved;
 }

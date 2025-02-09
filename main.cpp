@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
         saveBoardToFile("last.txt", board);
     }
     SudokuBoard sb(board);
-    bool solved = sb.solve(1000);
+    bool solved = sb.solve(200);
     sb.print();
     std::string& latexCode = sb.printSolvingSteps();
     std::cout << (solved ? "Solved" : "Not solvable") << std::endl << std::endl;
