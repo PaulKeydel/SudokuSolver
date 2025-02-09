@@ -1,7 +1,6 @@
 #include <set>
 #include <array>
 #include <vector>
-#include <unordered_set>
 
 /*!
     CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.
@@ -42,6 +41,7 @@ public:
         \return A string "{cand0, cand1, cand2}".
     */
     std::string cand2str();
+    bool contain(int dig) { return data.find(dig) != data.end(); }
     bool operator==(CandSet& op) { return this->data == op.data; }
     bool operator!=(CandSet& op) { return this->data != op.data; }
     CandSet operator-(CandSet& op);
@@ -122,9 +122,10 @@ public:
     std::string& printSolvingSteps();
     Cell& at(int row, int col);
     Cell& atBlock(int block, int index);
-    bool isInCol(int col, int digit);
-    bool isInRow(int row, int digit);
-    bool isInBlock(int block, int digit);
+    bool isInCol(int col, int digit, bool includeCands = false);
+    bool isInRow(int row, int digit, bool includeCands = false);
+    bool isInBlock(int block, int digit, bool includeCands = false);
+    bool isValid();
     bool isSolved();
     //methods for managing candidate list
     void collectCands();

@@ -190,7 +190,7 @@ Cell& SudokuBoard::atBlock(int block, int index)
     return b.at(9 * row_ + col_);
 }
 
-bool SudokuBoard::isInCol(int col, int digit)
+bool SudokuBoard::isInCol(int col, int digit, bool includeCands)
 {
     assert(col >= 0 && col < 9);
     int i = 0;
@@ -198,12 +198,13 @@ bool SudokuBoard::isInCol(int col, int digit)
     while (i < 9 && !found)
     {
         found = b.at(9 * i + col).isEq(digit);
-        i = i + 1;
+        if (includeCands && at(i, col).isGap()) found |= at(i, col).candidates.contain(digit);
+        i++;
     }
     return found;
 }
 
-bool SudokuBoard::isInRow(int row, int digit)
+bool SudokuBoard::isInRow(int row, int digit, bool includeCands)
 {
     assert(row >= 0 && row < 9);
     int i = 0;
@@ -211,12 +212,13 @@ bool SudokuBoard::isInRow(int row, int digit)
     while (i < 9 && !found)
     {
         found = b.at(9 * row + i).isEq(digit);
-        i = i + 1;
+        if (includeCands && at(row, i).isGap()) found |= at(row, i).candidates.contain(digit);
+        i++;
     }
     return found;
 }
 
-bool SudokuBoard::isInBlock(int block, int digit)
+bool SudokuBoard::isInBlock(int block, int digit, bool includeCands)
 {
     assert(block >= 0 && block < 9);
     int i = 0;
@@ -224,9 +226,27 @@ bool SudokuBoard::isInBlock(int block, int digit)
     while (i < 9 && !found)
     {
         found = (atBlock(block, i).isEq(digit));
-        i = i + 1;
+        if (includeCands && atBlock(block, i).isGap()) found |= atBlock(block, i).candidates.contain(digit);
+        i++;
     }
     return found;
+}
+
+bool SudokuBoard::isValid()
+{
+    for (int i = 0; i < 81; i++)
+    {
+        if (b.at(i).isGap() && b.at(i).lc() == 0) return false;
+    }
+    bool exist = true;
+    for (int dig = 1; dig < 10; dig++)
+    {
+        for (int i_ = 0; i_ < 9; i_++)
+        {
+            exist &= (isInBlock(i_, dig, true) && isInCol(i_, dig, true) && isInRow(i_, dig, true));
+        }
+    }
+    return exist;
 }
 
 bool SudokuBoard::isSolved()
@@ -235,15 +255,7 @@ bool SudokuBoard::isSolved()
     {
         if (b.at(i).isGap()) return false;
     }
-    bool exist = true;
-    for (int dig = 1; dig < 10; dig++)
-    {
-        for (int i_ = 0; i_ < 9; i_++)
-        {
-            exist = exist && isInBlock(i_, dig) && isInCol(i_, dig) && isInRow(i_, dig);
-        }
-    }
-    return exist;
+    return isValid();
 }
 
 void SudokuBoard::collectCands()
@@ -955,8 +967,8 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             {
                 continue;
             }
-            bool bInvalid0 = false;
-            bool bInvalid1 = false;
+            bool bValid0 = true;
+            bool bValid1 = true;
             const int rmCand0 = *origBoard[9 * r + c].candidates.begin();
             const int rmCand1 = *next(origBoard[9 * r + c].candidates.begin());
             //use first candidate as solution
@@ -965,14 +977,11 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             at(r, c).candidates.erase(rmCand0);
             setFinalValue(r, c);
             it_count = 0;
-            while (!bInvalid0 && (it_count <= numIterations))
+            while (bValid0 && (it_count <= numIterations))
             {
                 it_count++;
                 applyStrategies("Remove cand " + to_string(rmCand0) + " from cell " + at(r, c).cord2str() + ": ");
-                for (int i = 0; i < 81; i++)
-                {
-                    bInvalid0 |= (b.at(i).isGap() && b.at(i).lc() == 0);
-                }
+                bValid0 = isValid();
             }
             bool bSolved0 = isSolved();
             string latexCode0 = latexCode;
@@ -982,19 +991,16 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             at(r, c).candidates.erase(rmCand1);
             setFinalValue(r, c);
             it_count = 0;
-            while (!bInvalid1 && (it_count <= numIterations))
+            while (bValid1 && (it_count <= numIterations))
             {
                 it_count++;
                 applyStrategies("Remove cand " + to_string(rmCand1) + " from cell " + at(r, c).cord2str() + ": ");
-                for (int i = 0; i < 81; i++)
-                {
-                    bInvalid1 |= (b.at(i).isGap() && b.at(i).lc() == 0);
-                }
+                bValid1 = isValid();
             }
             bool bSolved1 = isSolved();
             string latexCode1 = latexCode;
             //check both results
-            if ((bInvalid0 && bSolved1) || (bInvalid1 && bSolved0))
+            if ((bSolved1 && !bValid0) || (bSolved0 && !bValid1))
             {
                 copyBoard(origBoard, b);
                 latexCode = bSolved0 ? latexCode1 : latexCode0;
@@ -1009,6 +1015,7 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             }
         }
     }
+    latexCode = origLatexCode;
     return false;
 }
     
