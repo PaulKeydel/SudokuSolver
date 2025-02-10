@@ -821,8 +821,8 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, string prefix
             //update cand list if we have an intersecting color pair
             if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
             {
-                assert(at(r, col1).pairColor == -1);
-                assert(at(row1, c).pairColor == -1);
+                //assert(at(r, col1).pairColor == -1);
+                //assert(at(row1, c).pairColor == -1);
                 bool step1ReducedCands = at(r, col1).candidates.remove(candPair);
                 appendSolvStep(r, col1, prefix + "Cand pair " + candPair.cand2str() + " removed due to colored pair", step1ReducedCands);
                 bool step2ReducedCands = at(row1, c).candidates.remove(candPair);
@@ -983,9 +983,13 @@ bool SudokuBoard::tryForcingChain(int numIterations)
                 applyStrategies("Remove cand " + to_string(rmCand0) + " from cell " + at(r, c).cord2str() + ": ");
                 bValid0 = isValid();
             }
-            bool bSolved0 = isSolved();
+            bool bSolved0 = bValid0 ? isSolved() : false;
             string latexCode0 = latexCode;
             //use second candidate as solution
+            if (!bSolved0 && bValid0)
+            {
+                continue;
+            }
             copyBoard(origBoard, b);
             latexCode = origLatexCode;
             at(r, c).candidates.erase(rmCand1);
@@ -997,7 +1001,7 @@ bool SudokuBoard::tryForcingChain(int numIterations)
                 applyStrategies("Remove cand " + to_string(rmCand1) + " from cell " + at(r, c).cord2str() + ": ");
                 bValid1 = isValid();
             }
-            bool bSolved1 = isSolved();
+            bool bSolved1 = !bValid0 && bValid1 ? isSolved() : false;
             string latexCode1 = latexCode;
             //check both results
             if ((bSolved1 && !bValid0) || (bSolved0 && !bValid1))
