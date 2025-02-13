@@ -46,7 +46,7 @@ public:
     bool operator!=(CandSet& op) { return this->data != op.data; }
     CandSet operator-(CandSet& op);
     CandSet operator&&(CandSet& op);
-    CandSet operator||(CandSet& op);
+    CandSet operator+(CandSet& op);
     CandSet& operator+=(CandSet& op);
     CandSet& operator-=(CandSet& op);
     CandSet& operator=(const CandSet& op);

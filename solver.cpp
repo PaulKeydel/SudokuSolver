@@ -55,7 +55,7 @@ CandSet CandSet::operator&&(CandSet& op)
     return dummy;
 }
 
-CandSet CandSet::operator||(CandSet& op)
+CandSet CandSet::operator+(CandSet& op)
 {
     CandSet dummy;
     dummy.data.insert(this->data.begin(), this->data.end());
@@ -71,8 +71,7 @@ CandSet& CandSet::operator+=(CandSet& op)
 
 CandSet& CandSet::operator-=(CandSet& op)
 {
-    CandSet dummy = *this - op;
-    *this = dummy;
+    *this = *this - op;
     return *this;
 }
 
@@ -321,12 +320,11 @@ void SudokuBoard::setFinalValue(int row, int col)
     assert(at(row, col).isGap());
     int newDigit = *at(row, col).candidates.begin();
     assert(newDigit > 0 && newDigit < 10);
-    //update cand list in same row
+    //update cand list in same row, in same col and block
     updateCandsInRow(row, vector<int>{col}, at(row, col).candidates);
-    //update cand list in same col
     updateCandsInCol(col, vector<int>{row}, at(row, col).candidates);
-    //update cand list in same block
     updateCandsInBlock(at(row, col).blk, vector<int>{at(row, col).blkidx}, at(row, col).candidates);
+    //set digit and delete candidate
     at(row, col).val = newDigit;
     at(row, col).candidates.erase(newDigit);
 }
@@ -527,9 +525,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col, string prefix)
             int c1 = idx1;
             if (c0 != col && c1 != col && c0 != c1 && (at(row, c0).lc() > 1) && (at(row, c1).lc() > 1))
             {
-                CandSet u = at(row, col).candidates;
-                u += at(row, c0).candidates;
-                u += at(row, c1).candidates;
+                CandSet u = at(row, col).candidates + at(row, c0).candidates + at(row, c1).candidates;
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInRow(row, vector<int>{col, c0, c1}, u);
@@ -542,9 +538,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col, string prefix)
             int r1 = idx1;
             if (r0 != row && r1 != row && r0 != r1 && (at(r0, col).lc() > 1) && (at(r1, col).lc() > 1))
             {
-                CandSet u = at(row, col).candidates;
-                u += at(r0, col).candidates;
-                u += at(r1, col).candidates;
+                CandSet u = at(row, col).candidates + at(r0, col).candidates + at(r1, col).candidates;
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInCol(col, vector<int>{row, r0, r1}, u);
@@ -838,14 +832,12 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, string prefix
                     CandSet t0 = at(i, col1).candidates;
                     CandSet t1 = at(i, c).candidates;
                     CandSet t2 = candPair - t0;
-                    if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
-                    {
-                        at(row1, col1).candidates = t2;
-                        at(r, c).candidates = t2;
-                        appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
-                        appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
-                        return true;
-                    }
+                    if (t0.size() != 2 || t0 != t1 || t2.size() != 1) continue;
+                    at(row1, col1).candidates = t2;
+                    at(r, c).candidates = t2;
+                    appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                    appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str(), true);
+                    return true;
                 }
                 for (int j = 0; j < 9; j++)
                 {
@@ -853,14 +845,12 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, string prefix
                     CandSet t0 = at(row1, j).candidates;
                     CandSet t1 = at(r, j).candidates;
                     CandSet t2 = candPair - t0;
-                    if (t0.size() == 2 && t0 == t1 && t2.size() == 1)
-                    {
-                        at(row1, col1).candidates = t2;
-                        at(r, c).candidates = t2;
-                        appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
-                        appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
-                        return true;
-                    }
+                    if (t0.size() != 2 || t0 != t1 || t2.size() != 1) continue;
+                    at(row1, col1).candidates = t2;
+                    at(r, c).candidates = t2;
+                    appendSolvStep(row1, col1, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                    appendSolvStep(r, c, prefix + "Cand pair " + candPair.cand2str() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str(), true);
+                    return true;
                 }
             }
         }
@@ -872,7 +862,7 @@ bool SudokuBoard::checkForIntersectingColorPairs(int row, int col, string prefix
         currCell = &at(row1, col1);
     }
     int nextColor = ~color & 1;
-    //check if one cell color in a block has a relation to a cell which is either in same col or in same row
+    //check if open cells in block are in one line, i.e. in one row or in one column
     int numLeftCellsInBlk = 0;
     int relRow = -1;
     int relCol = -1;
@@ -974,13 +964,13 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             //use first candidate as solution
             copyBoard(origBoard, b);
             latexCode = origLatexCode;
-            at(r, c).candidates.erase(rmCand0);
+            at(r, c).candidates.erase(rmCand1);
             setFinalValue(r, c);
             it_count = 0;
             while (bValid0 && (it_count <= numIterations))
             {
                 it_count++;
-                applyStrategies("Remove cand " + to_string(rmCand0) + " from cell " + at(r, c).cord2str() + ": ");
+                applyStrategies("Remove cand " + to_string(rmCand1) + " from cell " + at(r, c).cord2str() + ": ");
                 bValid0 = isValid();
             }
             bool bSolved0 = bValid0 ? isSolved() : false;
@@ -992,23 +982,23 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             }
             copyBoard(origBoard, b);
             latexCode = origLatexCode;
-            at(r, c).candidates.erase(rmCand1);
+            at(r, c).candidates.erase(rmCand0);
             setFinalValue(r, c);
             it_count = 0;
             while (bValid1 && (it_count <= numIterations))
             {
                 it_count++;
-                applyStrategies("Remove cand " + to_string(rmCand1) + " from cell " + at(r, c).cord2str() + ": ");
+                applyStrategies("Remove cand " + to_string(rmCand0) + " from cell " + at(r, c).cord2str() + ": ");
                 bValid1 = isValid();
             }
             bool bSolved1 = !bValid0 && bValid1 ? isSolved() : false;
             string latexCode1 = latexCode;
-            //check both results
+            //check if both quizzes are solvable/invalid or invalid/solvable
             if ((bSolved1 && !bValid0) || (bSolved0 && !bValid1))
             {
                 copyBoard(origBoard, b);
                 latexCode = bSolved0 ? latexCode1 : latexCode0;
-                at(r, c).candidates.erase(bSolved0 ? rmCand0 : rmCand1);
+                at(r, c).candidates.erase(bSolved0 ? rmCand1 : rmCand0);
                 setFinalValue(r, c);
                 appendSolvStep(r, c, "Forcing chain", true);
                 while (!isSolved())
