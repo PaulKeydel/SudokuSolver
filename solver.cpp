@@ -11,7 +11,7 @@ bool CandSet::remove(CandSet& set)
     for (auto it = set.begin(); it != set.end(); ++it)
     {
         assert((*it > 0) && (*it < 10));
-        this->data.erase(*it);
+        data.erase(*it);
     }
     int lcafter = this->size();
     return lcbefore > lcafter;
@@ -19,12 +19,12 @@ bool CandSet::remove(CandSet& set)
 
 string CandSet::cand2str()
 {
-    if (this->data.empty())
+    if (data.empty())
     {
         return "{}";
     }
     string res = "{";
-    auto ci = this->data.begin();
+    auto ci = data.begin();
     for (int k = 0; k < data.size(); k++)
     {
         res += to_string(*ci);
@@ -44,28 +44,28 @@ string CandSet::cand2str()
 CandSet CandSet::operator-(CandSet& op)
 {
     CandSet dummy;
-    set_difference(this->data.begin(), this->data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
+    set_difference(data.begin(), data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
     return dummy;
 }
 
 CandSet CandSet::operator&&(CandSet& op)
 {
     CandSet dummy;
-    set_intersection(this->data.begin(), this->data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
+    set_intersection(data.begin(), data.end(), op.data.begin(), op.data.end(), inserter(dummy.data, dummy.data.begin()));
     return dummy;
 }
 
 CandSet CandSet::operator+(CandSet& op)
 {
     CandSet dummy;
-    dummy.data.insert(this->data.begin(), this->data.end());
+    dummy.data.insert(data.begin(), data.end());
     dummy.data.insert(op.data.begin(), op.data.end());
     return dummy;
 }
 
 CandSet& CandSet::operator+=(CandSet& op)
 {
-    this->data.insert(op.data.begin(), op.data.end());
+    data.insert(op.data.begin(), op.data.end());
     return *this;
 }
 
@@ -77,7 +77,7 @@ CandSet& CandSet::operator-=(CandSet& op)
 
 CandSet& CandSet::operator=(const CandSet& op)
 {
-    this->data = op.data;
+    data = op.data;
     return *this;
 }
 
@@ -552,9 +552,7 @@ bool SudokuBoard::checkCellForNakedTriplet(int row, int col, string prefix)
             int blk = at(row, col).blk;
             if (blkIdx0 != at(row, col).blkidx && blkIdx1 != at(row, col).blkidx && blkIdx0 != blkIdx1 && atBlock(blk, blkIdx0).lc() > 1 && atBlock(blk, blkIdx1).lc() > 1)
             {
-                CandSet u = at(row, col).candidates;
-                u += atBlock(blk, blkIdx0).candidates;
-                u += atBlock(blk, blkIdx1).candidates;
+                CandSet u = at(row, col).candidates + atBlock(blk, blkIdx0).candidates + atBlock(blk, blkIdx1).candidates;
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCandsInBlock(blk, vector<int>{at(row, col).blkidx, blkIdx0, blkIdx1}, u);
@@ -925,20 +923,25 @@ void SudokuBoard::applyStrategies(string prefix)
     {
         for (int col = 0; col < 9; col++)
         {
-            if (at(row, col).lc() == 0)
+            if (!at(row, col).isGap())
             {
-                //step over if there are no candidates
                 continue;
             }
-            if (checkCellForNakedSingle(row, col, prefix)) continue;
-            if (checkCellForHiddenSingle(row, col, prefix)) continue;
-            bool tryNext = !checkCellForNakedPair(row, col, prefix);
+            bool tryNext = true;
+            if (tryNext) tryNext = !checkCellForNakedSingle(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForHiddenSingle(row, col, prefix);
+            if (tryNext) tryNext = !checkCellForNakedPair(row, col, prefix);
             if (tryNext) tryNext = !checkCellForHiddenPair(row, col, prefix);
             if (tryNext) tryNext = !checkCellForLockedCandsInBlocks(row, col, prefix);
             if (tryNext) tryNext = !checkCellForNakedTriplet(row, col, prefix);
             if (tryNext) tryNext = !checkCellForXWing(row, col, prefix);
             if (tryNext) tryNext = !checkCellForXYWing(row, col, prefix);
             if (tryNext) checkForIntersectingColorPairs(row, col, prefix);
+            if (!isValid())
+            {
+                appendSolvStep(row, col, "Contradiction occurred!", true);
+                return;
+            }
         }
     }
 }
@@ -953,10 +956,7 @@ bool SudokuBoard::tryForcingChain(int numIterations)
     {
         for (int c = 0; c < 9; c++)
         {
-            if (origBoard[9 * r + c].lc() != 2)
-            {
-                continue;
-            }
+            if (origBoard[9 * r + c].lc() != 2) continue;
             bool bValid0 = true;
             bool bValid1 = true;
             const int rmCand0 = *origBoard[9 * r + c].candidates.begin();
@@ -976,10 +976,7 @@ bool SudokuBoard::tryForcingChain(int numIterations)
             bool bSolved0 = bValid0 ? isSolved() : false;
             string latexCode0 = latexCode;
             //use second candidate as solution
-            if (!bSolved0 && bValid0)
-            {
-                continue;
-            }
+            if (!bSolved0 && bValid0) continue;
             copyBoard(origBoard, b);
             latexCode = origLatexCode;
             at(r, c).candidates.erase(rmCand0);
