@@ -1,6 +1,9 @@
 #include <set>
 #include <array>
 #include <vector>
+#include <climits>
+#include <string>
+#include <algorithm>
 
 /*!
     CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.

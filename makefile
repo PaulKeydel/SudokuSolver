@@ -15,7 +15,7 @@ debug: $(TARGET)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(TARGET): $(OBJS)
-	$(CC) $(LFLAGS) $^ -o $@
+	$(CC) $^ $(LFLAGS) -o $@
 
 clean:
 	rm *.o
