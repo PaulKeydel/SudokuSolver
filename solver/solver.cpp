@@ -257,9 +257,9 @@ bool SudokuBoard::isValid()
 
 bool SudokuBoard::isSolved()
 {
-    for (int i = 0; i < 81; i++)
+    for (Cell& cell : b)
     {
-        if (b.at(i).isGap()) return false;
+        if (cell.isGap()) return false;
     }
     return isValid();
 }
@@ -350,10 +350,8 @@ bool SudokuBoard::checkCellForNakedSingle(Cell& cell, string prefix)
     {
         return false;
     }
-    int row = cell.row;
-    int col = cell.col;
     setFinalValue(cell);
-    appendSolvStep(row, col, prefix + "Naked Single", true);
+    appendSolvStep(cell.row, cell.col, prefix + "Naked Single", true);
     return true;
 }
 
@@ -363,25 +361,23 @@ bool SudokuBoard::checkCellForHiddenSingle(Cell& cell, string prefix)
     {
         return false;
     }
-    int row = cell.row;
-    int col = cell.col;
     CandSet uniqueC;
     //search along row and collect all other candidates
-    uniqueC = cell.candidates - collectCands(cell, 'r', vector<int>{col});
+    uniqueC = cell.candidates - collectCands(cell, 'r', vector<int>{cell.col});
     if (uniqueC.size() == 1)
     {
         cell.candidates = uniqueC;
         setFinalValue(cell);
-        appendSolvStep(row, col, prefix + "Hidden Single", true);
+        appendSolvStep(cell.row, cell.col, prefix + "Hidden Single", true);
         return true;
     }
     //search along col and collect all other candidates
-    uniqueC = cell.candidates - collectCands(cell, 'c', vector<int>{row});
+    uniqueC = cell.candidates - collectCands(cell, 'c', vector<int>{cell.row});
     if (uniqueC.size() == 1)
     {
         cell.candidates = uniqueC;
         setFinalValue(cell);
-        appendSolvStep(row, col, prefix + "Hidden Single", true);
+        appendSolvStep(cell.row, cell.col, prefix + "Hidden Single", true);
         return true;
     }
     //search within block and collect all other candidates
@@ -390,7 +386,7 @@ bool SudokuBoard::checkCellForHiddenSingle(Cell& cell, string prefix)
     {
         cell.candidates = uniqueC;
         setFinalValue(cell);
-        appendSolvStep(row, col, prefix + "Hidden Single", true);
+        appendSolvStep(cell.row, cell.col, prefix + "Hidden Single", true);
         return true;
     }
     return false;
@@ -403,33 +399,30 @@ bool SudokuBoard::checkCellForNakedPair(Cell& cell, string prefix)
         return false;
     }
     CandSet candPair = cell.candidates;
-    int row = cell.row;
-    int col = cell.col;
-    int blk = cell.blk;
     for (int idx = 0; idx < 9; idx++)
     {
         //if cell(row, col) can basically be a naked pair, look for the other part in same row
-        Cell* cell1 = &at(row, idx);
-        if (cell1->col != col && cell1->candidates == candPair)
+        Cell* cell1 = &at(cell.row, idx);
+        if (cell1->col != cell.col && cell1->candidates == candPair)
         {
-            bool stepReducedCands = updateCands(candPair, cell, 'r', vector<int>{col, cell1->col});
-            appendSolvStep(row, col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
+            bool stepReducedCands = updateCands(candPair, cell, 'r', vector<int>{cell.col, cell1->col});
+            appendSolvStep(cell.row, cell.col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same col
-        cell1 = &at(idx, col);
-        if (cell1->row != row && cell1->candidates == candPair)
+        cell1 = &at(idx, cell.col);
+        if (cell1->row != cell.row && cell1->candidates == candPair)
         {
-            bool stepReducedCands = updateCands(candPair, cell, 'c', vector<int>{row, cell1->row});
-            appendSolvStep(row, col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
+            bool stepReducedCands = updateCands(candPair, cell, 'c', vector<int>{cell.row, cell1->row});
+            appendSolvStep(cell.row, cell.col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
         //if cell(row, col) can basically be a naked pair, look for the other part in same block
-        cell1 = &atBlock(blk, idx);
+        cell1 = &atBlock(cell.blk, idx);
         if (cell1->blkidx != cell.blkidx && cell1->candidates == candPair)
         {
             bool stepReducedCands = updateCands(candPair, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx});
-            appendSolvStep(row, col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
+            appendSolvStep(cell.row, cell.col, prefix + "Naked Pair with cell " + cell1->cord2str(), stepReducedCands);
             if (stepReducedCands) return true;
         }
     }
@@ -442,40 +435,37 @@ bool SudokuBoard::checkCellForHiddenPair(Cell& cell, string prefix)
     {
         return false;
     }
-    int row = cell.row;
-    int col = cell.col;
-    int blk = cell.blk;
     CandSet uniqueC;
     for (int idx = 0; idx < 9; idx++)
     {
         //search for a pair along row
-        Cell* cell1 = &at(row, idx);
-        if (cell1->col != col && cell1->isGap())
+        Cell* cell1 = &at(cell.row, idx);
+        if (cell1->col != cell.col && cell1->isGap())
         {
-            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'r', vector<int>{col, cell1->col});
+            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'r', vector<int>{cell.col, cell1->col});
             if (uniqueC.size() == 2)
             {
                 cell.candidates = uniqueC;
                 cell1->candidates = uniqueC;
-                appendSolvStep(row, col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
+                appendSolvStep(cell.row, cell.col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
                 return true;
             }
         }
         //search for a pair along col
-        cell1 = &at(idx, col);
-        if (cell1->row != row && cell1->isGap())
+        cell1 = &at(idx, cell.col);
+        if (cell1->row != cell.row && cell1->isGap())
         {
-            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'c', vector<int>{row, cell1->row});
+            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'c', vector<int>{cell.row, cell1->row});
             if (uniqueC.size() == 2)
             {
                 cell.candidates = uniqueC;
                 cell1->candidates = uniqueC;
-                appendSolvStep(row, col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
+                appendSolvStep(cell.row, cell.col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
                 return true;
             }
         }
         //search the pair within block
-        cell1 = &atBlock(blk, idx);
+        cell1 = &atBlock(cell.blk, idx);
         if (cell1->blkidx != cell.blkidx && cell1->isGap())
         {
             uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'b', vector<int>{cell.blkidx, cell1->blkidx});
@@ -483,7 +473,7 @@ bool SudokuBoard::checkCellForHiddenPair(Cell& cell, string prefix)
             {
                 cell.candidates = uniqueC;
                 cell1->candidates = uniqueC;
-                appendSolvStep(row, col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
+                appendSolvStep(cell.row, cell.col, prefix + "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str(), true);
                 return true;
             }
         }
@@ -497,49 +487,46 @@ bool SudokuBoard::checkCellForNakedTriplet(Cell& cell, string prefix)
     {
         return false;
     }
-    int row = cell.row;
-    int col = cell.col;
-    int blk = cell.blk;
     for (int idx0 = 0; idx0 < 9; idx0++)
     {
         for (int idx1 = 0; idx1 < 9; idx1++)
         {
             //if cell(row, col) can basically be a naked triple, look for the other part in same row
-            Cell* cell1 = &at(row, idx0);
-            Cell* cell2 = &at(row, idx1);
-            if (idx0 != idx1 && cell1->col != col && cell2->col != col && cell1->lc() > 1 && cell2->lc() > 1)
+            Cell* cell1 = &at(cell.row, idx0);
+            Cell* cell2 = &at(cell.row, idx1);
+            if (idx0 != idx1 && cell1->col != cell.col && cell2->col != cell.col && cell1->lc() > 1 && cell2->lc() > 1)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
                 if (u.size() == 3)
                 {
-                    bool stepReducedCands = updateCands(u, cell, 'r', vector<int>{col, cell1->col, cell2->col});
-                    appendSolvStep(row, col, prefix + "Naked Triplet in row with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
+                    bool stepReducedCands = updateCands(u, cell, 'r', vector<int>{cell.col, cell1->col, cell2->col});
+                    appendSolvStep(cell.row, cell.col, prefix + "Naked Triplet in row with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
             //if cell(row, col) can basically be a naked triple, look for the other part in same col
-            cell1 = &at(idx0, col);
-            cell2 = &at(idx1, col);
-            if (idx0 != idx1 && cell1->row != row && cell2->row != row && cell1->lc() > 1 && cell2->lc() > 1)
+            cell1 = &at(idx0, cell.col);
+            cell2 = &at(idx1, cell.col);
+            if (idx0 != idx1 && cell1->row != cell.row && cell2->row != cell.row && cell1->lc() > 1 && cell2->lc() > 1)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
                 if (u.size() == 3)
                 {
-                    bool stepReducedCands = updateCands(u, cell, 'c', vector<int>{row, cell1->row, cell2->row});
-                    appendSolvStep(row, col, prefix + "Naked Triplet in col with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
+                    bool stepReducedCands = updateCands(u, cell, 'c', vector<int>{cell.row, cell1->row, cell2->row});
+                    appendSolvStep(cell.row, cell.col, prefix + "Naked Triplet in col with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
             //if cell(row, col) can basically be a naked triple, look for the other part in same block
-            cell1 = &atBlock(blk, idx0);
-            cell2 = &atBlock(blk, idx1);
+            cell1 = &atBlock(cell.blk, idx0);
+            cell2 = &atBlock(cell.blk, idx1);
             if (idx0 != idx1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx && cell1->lc() > 1 && cell2->lc() > 1)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
                 if (u.size() == 3)
                 {
                     bool stepReducedCands = updateCands(u, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx});
-                    appendSolvStep(row, col, prefix + "Naked Triplet in block with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
+                    appendSolvStep(cell.row, cell.col, prefix + "Naked Triplet in block with cell " + cell1->cord2str() + " and cell " + cell2->cord2str(), stepReducedCands);
                     if (stepReducedCands) return true;
                 }
             }
