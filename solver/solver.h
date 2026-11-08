@@ -27,10 +27,6 @@ public:
         \return dig The number of candidates as an int value. If CandSet::data is empty, 0 is returned.
     */
     int size() { return (int)(this->data.size()); }
-    /*! Checks whether candidates contain a given digit.
-        \param dig Digit between 1 and 9.
-    */
-    bool contain(int dig) { return data.find(dig) != data.end(); }
     /*! Inserts a specific candidate number into the list.
         \param dig The digit to be inserted into the set (between 1 and 9).
     */
@@ -131,9 +127,9 @@ public:
     std::string& printSolvingSteps();
     Cell& at(int row, int col);
     Cell& atBlock(int block, int index);
-    bool isInCol(int col, int digit, bool includeCands = false);
-    bool isInRow(int row, int digit, bool includeCands = false);
-    bool isInBlock(int block, int digit, bool includeCands = false);
+    bool isInCol(int col, int digit);
+    bool isInRow(int row, int digit);
+    bool isInBlock(int block, int digit);
     bool isValid();
     bool isSolved();
     //methods for managing candidate list

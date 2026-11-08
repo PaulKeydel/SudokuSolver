@@ -198,7 +198,7 @@ Cell& SudokuBoard::atBlock(int block, int index)
     return b.at(9 * row_ + col_);
 }
 
-bool SudokuBoard::isInCol(int col, int digit, bool includeCands)
+bool SudokuBoard::isInCol(int col, int digit)
 {
     assert(col >= 0 && col < 9);
     int i = 0;
@@ -206,13 +206,12 @@ bool SudokuBoard::isInCol(int col, int digit, bool includeCands)
     while (i < 9 && !found)
     {
         found = b.at(9 * i + col).isEq(digit);
-        if (includeCands && at(i, col).isGap()) found |= at(i, col).candidates.contain(digit);
         i++;
     }
     return found;
 }
 
-bool SudokuBoard::isInRow(int row, int digit, bool includeCands)
+bool SudokuBoard::isInRow(int row, int digit)
 {
     assert(row >= 0 && row < 9);
     int i = 0;
@@ -220,13 +219,12 @@ bool SudokuBoard::isInRow(int row, int digit, bool includeCands)
     while (i < 9 && !found)
     {
         found = b.at(9 * row + i).isEq(digit);
-        if (includeCands && at(row, i).isGap()) found |= at(row, i).candidates.contain(digit);
         i++;
     }
     return found;
 }
 
-bool SudokuBoard::isInBlock(int block, int digit, bool includeCands)
+bool SudokuBoard::isInBlock(int block, int digit)
 {
     assert(block >= 0 && block < 9);
     int i = 0;
@@ -234,7 +232,6 @@ bool SudokuBoard::isInBlock(int block, int digit, bool includeCands)
     while (i < 9 && !found)
     {
         found = (atBlock(block, i).isEq(digit));
-        if (includeCands && atBlock(block, i).isGap()) found |= atBlock(block, i).candidates.contain(digit);
         i++;
     }
     return found;
@@ -242,19 +239,20 @@ bool SudokuBoard::isInBlock(int block, int digit, bool includeCands)
 
 bool SudokuBoard::isValid()
 {
-    for (int i = 0; i < 81; i++)
+    for (Cell& cell : b)
     {
-        if (b.at(i).isGap() && b.at(i).lc() == 0) return false;
-    }
-    bool exist = true;
-    for (int dig = 1; dig < 10; dig++)
-    {
-        for (int i_ = 0; i_ < 9; i_++)
+        if (cell.isGap() && cell.lc() == 0) return false;
+
+        if (cell.isGap()) continue;
+        int val = cell.val;
+        cell.val = 0;
+        if (isInBlock(cell.blk, val) || isInCol(cell.col, val) || isInRow(cell.row, val))
         {
-            exist &= (isInBlock(i_, dig, true) && isInCol(i_, dig, true) && isInRow(i_, dig, true));
+            return false;
         }
+        cell.val = val;
     }
-    return exist;
+    return true;
 }
 
 bool SudokuBoard::isSolved()
@@ -268,17 +266,14 @@ bool SudokuBoard::isSolved()
 
 void SudokuBoard::fillCands()
 {
-    for (int idx = 0; idx < 81; idx++)
+    for (Cell& cell : b)
     {
-        if (!b.at(idx).isGap()) continue;
-        int row = b.at(idx).row;
-        int col = b.at(idx).col;
-        int blk = b.at(idx).blk;
+        if (!cell.isGap()) continue;
         for (int dig = 1; dig < 10; dig++)
         {
-            if (!(isInRow(row, dig) || isInCol(col, dig) || isInBlock(blk, dig)))
+            if (!(isInRow(cell.row, dig) || isInCol(cell.col, dig) || isInBlock(cell.blk, dig)))
             {
-                b.at(idx).candidates.insert(dig);
+                cell.candidates.insert(dig);
             }
         }
     }
