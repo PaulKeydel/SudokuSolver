@@ -19,6 +19,18 @@ private:
 public:
     /*! Creates an empty candidate container. After creation, the objects internal data variable has size 0.*/
     CandSet() {};
+    CandSet(const CandSet& other) { this->data = other.data; }
+    /*! Get iterators from std::set.*/
+    const std::set<int>::iterator begin() const { return this->data.begin(); }
+    const std::set<int>::iterator end() const { return this->data.end(); }
+    /*! Gives the number of listed candidates.
+        \return dig The number of candidates as an int value. If CandSet::data is empty, 0 is returned.
+    */
+    int size() { return (int)(this->data.size()); }
+    /*! Checks whether candidates contain a given digit.
+        \param dig Digit between 1 and 9.
+    */
+    bool contain(int dig) { return data.find(dig) != data.end(); }
     /*! Inserts a specific candidate number into the list.
         \param dig The digit to be inserted into the set (between 1 and 9).
     */
@@ -27,32 +39,24 @@ public:
         \param dig The digit to be deleted from set (between 1 and 9).
     */
     void erase(int dig) { this->data.erase(dig); }
-    /*! Gives the number of listed candidates.
-        \return dig The number of candidates as an int value. If CandSet::data is empty, 0 is returned.
-    */
-    int size() { return (int)(this->data.size()); }
     /*! Reset the object and delete all candidates in set. After this, CandSet::size is 0.
     */
     void clear() { this->data.clear(); }
-    const std::set<int>::iterator begin() const { return this->data.begin(); }
-    const std::set<int>::iterator end() const { return this->data.end(); }
-    /*! Removes all candidates that are given by the argument.
-        \return <true> if at least one candidate could successfully be removed. <false> if the size could not be reduced.
+    /*! Return candidate at specific position.
+        \param pos The position between 0 and size() - 1.
     */
-    bool remove(CandSet& set);
-    /*! Produces a formatted output string containing the entire set of candidates.
-        \return A string "{cand0, cand1, cand2}".
-    */
-    std::string cand2str();
-    bool contain(int dig) { return data.find(dig) != data.end(); }
-    bool operator==(CandSet& op) { return this->data == op.data; }
-    bool operator!=(CandSet& op) { return this->data != op.data; }
-    CandSet operator-(CandSet& op);
-    CandSet operator&&(CandSet& op);
-    CandSet operator+(CandSet& op);
-    CandSet& operator+=(CandSet& op);
-    CandSet& operator-=(CandSet& op);
-    CandSet& operator=(const CandSet& op);
+    int getCand(int pos) { return pos == 0 ? *begin() : *next(begin(), pos); }
+
+    bool remove(CandSet set);
+    std::string to_string();
+    bool operator==(CandSet& op);
+    bool operator!=(CandSet& op);
+    CandSet operator-(CandSet op);
+    CandSet operator&&(CandSet op);
+    CandSet operator+(CandSet op);
+    CandSet& operator+=(CandSet op);
+    CandSet& operator-=(CandSet op);
+    CandSet& operator=(const CandSet op);
 };
 
 /*!
@@ -88,16 +92,19 @@ struct Cell
     CandSet candidates;
     //methods
     Cell() {};
+    Cell operator=(const Cell& other);
     /*!Set all class parameters (position and digit) based on the Z-ordered cell index.*/
     void init(int idx, int digit);
     /*!Get current coordinates as formatted string.*/
     std::string cord2str();
+    /*! Produces a formatted output string containing the entire set of candidates.*/
+    std::string cand2str();
     /*!Is equal to Cell::val?*/
-    bool isEq(int dig) { return (this->val == dig); };
+    bool isEq(int dig) { return (val == dig); };
     /*!Is cell unknown?*/
-    bool isGap() { return (this->val == 0); };
+    bool isGap() { return (val == 0); };
     /*!Get length of cands set.*/
-    const int lc() { return this->candidates.size(); };
+    const int lc() { return candidates.size(); };
 };
 
 /*!
@@ -118,7 +125,6 @@ private:
     std::vector<std::pair<int, std::string>> solvingSteps;
     std::string latexCode;
     void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
-    void copyBoard(const std::array<Cell, 81>& src, std::array<Cell, 81>& dest);
 public:
     SudokuBoard(int* board);
     void print();
@@ -131,21 +137,20 @@ public:
     bool isValid();
     bool isSolved();
     //methods for managing candidate list
-    void collectCands();
-    bool updateCandsInRow(int row, std::vector<int> excludedPositions, CandSet digits);
-    bool updateCandsInCol(int col, std::vector<int> excludedPositions, CandSet digits);
-    bool updateCandsInBlock(int blk, std::vector<int> excludedPositions, CandSet digits);
-    void setFinalValue(int row, int col);
+    void fillCands();
+    CandSet collectCands(Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
+    bool updateCands(CandSet digits, Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
+    void setFinalValue(Cell& cell);
     //solving techniques
-    bool checkCellForNakedSingle(int row, int col, std::string prefix);
-    bool checkCellForHiddenSingle(int row, int col, std::string prefix);
-    bool checkCellForNakedPair(int row, int col, std::string prefix);
-    bool checkCellForHiddenPair(int row, int col, std::string prefix);
-    bool checkCellForNakedTriplet(int row, int col, std::string prefix);
-    bool checkCellForXWing(int row, int col, std::string prefix);
-    bool checkCellForXYWing(int row, int col, std::string prefix);
-    bool checkCellForLockedCandsInBlocks(int row, int col, std::string prefix);
-    bool checkForIntersectingColorPairs(int row, int col, std::string prefix, int row1 = -1, int col1 = -1, int color = 0);
+    bool checkCellForNakedSingle(Cell& cell, std::string prefix);
+    bool checkCellForHiddenSingle(Cell& cell, std::string prefix);
+    bool checkCellForNakedPair(Cell& cell, std::string prefix);
+    bool checkCellForHiddenPair(Cell& cell, std::string prefix);
+    bool checkCellForNakedTriplet(Cell& cell, std::string prefix);
+    bool checkCellForXWing(Cell& cell, std::string prefix);
+    bool checkCellForXYWing(Cell& cell, std::string prefix);
+    bool checkCellForLockedCandsInBlocks(Cell& cell, std::string prefix);
+    bool checkForIntersectingColorPairs(Cell& cell, std::string prefix, int row1 = -1, int col1 = -1, int color = 0);
     void applyStrategies(std::string prefix = "");
     bool tryForcingChain(int numIterations);
     bool solve(int numIterations = INT_MAX);

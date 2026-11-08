@@ -3,26 +3,30 @@ CFLAGS=-c -std=c++11
 LFLAGS=-lstdc++ -lncurses
 TARGET=sudoku
 
+OBJDIR=obj
+OUTDIR=outputs
+
 SRCS=$(wildcard *.cpp)
-OBJS=$(patsubst %.cpp,%.o,$(SRCS))
+OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))
 
 all: $(TARGET)
 
 debug: CFLAGS += -g -Wall
 debug: $(TARGET)
 
-%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp | $(OBJDIR) $(OUTDIR)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(TARGET): $(OBJS)
 	$(CC) $^ $(LFLAGS) -o $@
 
-clean:
-	rm *.o
-	rm $(TARGET)
+$(OBJDIR):
+	mkdir -p $@
 
-.PHONY: doc
-doc:
-	cd doc; doxygen Doxyfile
-	cd doc/latex; make
-	cp doc/latex/refman.pdf doc/refman.pdf
+$(OUTDIR):
+	mkdir -p $@
+
+clean:
+	rm -r $(OBJDIR)
+	rm -r $(OUTDIR)
+	rm $(TARGET)

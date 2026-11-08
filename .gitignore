@@ -1,0 +1,4 @@
+solver/obj/
+solver/outputs/
+*.json
+last.txt
