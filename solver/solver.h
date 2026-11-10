@@ -3,7 +3,6 @@
 #include <vector>
 #include <climits>
 #include <string>
-#include <algorithm>
 
 /*!
     CandSet is used to store and manage all possible candidates of a cell, i.e. the class contains both a container for candidates and several functions to manipulate the set. Manipulating data includes adding new digits, subtracting digits or calculating the union and intersection.
@@ -87,7 +86,7 @@ struct Cell
     //set for storing candidates
     CandSet candidates;
     //methods
-    Cell() {};
+    Cell(): val(0), row(-1), col(-1), blk(-1), blkidx(-1), pairColor(-1) {};
     Cell operator=(const Cell& other);
     /*!Set all class parameters (position and digit) based on the Z-ordered cell index.*/
     void init(int idx, int digit);
@@ -103,51 +102,56 @@ struct Cell
     const int lc() { return candidates.size(); };
 };
 
-/*!
-    SudokuBoard represents the whole board and comprises all 81 cells of type Cell. The class additionally includes methods for collecting and updating candidates as well as solving techniques.
-
-    Use SudokuBoard::solve to find the solution of the current quiz. The algorithm iteratively applies all implemented techniques to each cell. The methods SudokuBoard::print and SudokuBoard::printSolvingSteps print the resulting board and all effective solving steps.
-
-    The first step of solving is to collect all candidates in empty cells. For this, SudokuBoard::solve calls SudokuBoard::collectCands. For each empty cell SudokuBoard::collectCands checks if a digit between 1 and 9 is missing in current row, column and block by calling helper functions SudokuBoard::isInRow, SudokuBoard::isInCol, SudokuBoard::isInBlock.
-
-    The next step is the strategic solving. Here the approach of the implemented techniques depends on whether we have only one or more candidates in the list. If there is a naked single or a hidden single, we'll obtain a candidate set with only one entry. Thus, Cell::val can directly be set and the found digit can be removed from all candidate sets in same row, column and subblock. The process of setting Cell::val and updating the corresponding row, column or block is condensed in SudokuBoard::setFinalValue.
-    All other solving techniques are used to piecewise reduce the CandSet by considering logic patterns and dependencies. Elimination either covers the own CandSet or the sets in neighborhood. In order to check if an elimination was successful in a row, column or block sub-structure, the algorithm utilises SudokuBoard::updateCandsInRow, SudokuBoard::updateCandsInRow and SudokuBoard::updateCandsInRow. Only if all existing candidate sets can be reduced to size 1 the Sudoku solver can give a complete solution.
-*/
-class SudokuBoard
+class Board
 {
 private:
     std::array<Cell, 81> b;
-    //stuff for list of solving steps
-    std::vector<std::pair<int, std::string>> solvingSteps;
-    std::string latexCode;
-    void appendSolvStep(int row, int col, std::string text, bool bReducedCands);
-public:
-    SudokuBoard(int* board);
-    void print();
-    std::string& printSolvingSteps();
-    Cell& at(int row, int col);
-    Cell& atBlock(int block, int index);
     bool isInCol(int col, int digit);
     bool isInRow(int row, int digit);
     bool isInBlock(int block, int digit);
+public:
+    Board() {};
+    Board(Board& other) { for (int k = 0; k < 81; k++) b[k] = other[k]; }
+
+    const std::array<Cell, 81>::iterator begin() { return b.begin(); }
+    const std::array<Cell, 81>::iterator end() { return b.end(); }
+    Cell& operator[](int i);
+    Board& operator=(Board& other);
+
+    Cell& at(int row, int col);
+    Cell& atBlock(int block, int index);
     bool isValid();
     bool isSolved();
-    //methods for managing candidate list
     void fillCands();
+    std::string getBoardText();
+};
+
+class Solver: public Board
+{
+private:
+    //stuff for list of solving steps
+    std::vector<std::pair<int, std::string>> solvingSteps;
+    std::string latexCode;
+    void appendSolvStep(int row, int col, std::string text);
+public:
+    Solver(): Board() {};
+    //output methods
+    std::string getStepsText();
+    std::string getLatexCode();
+    //methods for operating on candidate lists
     CandSet collectCands(Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
     bool updateCands(CandSet digits, Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
     void setFinalValue(Cell& cell);
     //solving techniques
-    bool checkCellForNakedSingle(Cell& cell, std::string prefix);
-    bool checkCellForHiddenSingle(Cell& cell, std::string prefix);
-    bool checkCellForNakedPair(Cell& cell, std::string prefix);
-    bool checkCellForHiddenPair(Cell& cell, std::string prefix);
-    bool checkCellForNakedTriplet(Cell& cell, std::string prefix);
-    bool checkCellForXWing(Cell& cell, std::string prefix);
-    bool checkCellForXYWing(Cell& cell, std::string prefix);
-    bool checkCellForLockedCandsInBlocks(Cell& cell, std::string prefix);
-    bool checkForIntersectingColorPairs(Cell& cell, std::string prefix, int row1 = -1, int col1 = -1, int color = 0);
-    void applyStrategies(std::string prefix = "");
-    bool tryForcingChain(int numIterations);
-    bool solve(int numIterations = INT_MAX);
+    bool checkCellForNakedSingle(Cell& cell, bool print_step);
+    bool checkCellForHiddenSingle(Cell& cell, bool print_step);
+    bool checkCellForNakedPair(Cell& cell, bool print_step);
+    bool checkCellForHiddenPair(Cell& cell, bool print_step);
+    bool checkCellForNakedTriplet(Cell& cell, bool print_step);
+    bool checkCellForXWing(Cell& cell, bool print_step);
+    bool checkCellForXYWing(Cell& cell, bool print_step);
+    bool checkCellForLockedCandsInBlocks(Cell& cell, bool print_step);
+    bool checkForIntersectingColorPairs(Cell& cell, bool print_step, int row1 = -1, int col1 = -1, int color = 0);
+    bool applyStrategies(Board& quiz, int numIterations, bool print_steps = true);
+    bool solve(Board& quiz, int numIterations = INT_MAX);
 };
