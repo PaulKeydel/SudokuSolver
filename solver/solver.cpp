@@ -228,18 +228,17 @@ void Board::fillCands()
     }
 }
 
-string Board::getBoardText()
+string Board::to_text()
 {
     string boardText = "";
     for (int row = 0; row < 9; row++)
     {
         for (int col = 0; col < 9; col++)
         {
-            boardText += to_string(this->at(row, col).val) + "  ";
-            if (col % 3 == 2) boardText += "  ";
+            boardText += to_string(this->at(row, col).val);
+            if (col < 8) boardText += " ";
         }
         boardText += "\n";
-        if (row % 3 == 2) boardText += "\n";
     }
     return boardText;
 }
@@ -699,133 +698,112 @@ bool Solver::checkCellForLockedCandsInBlocks(Cell& cell, bool print_step)
     return false;
 }
 
-bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, int row1, int col1, int color)
+bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* curr, int color)
 {
     if (cell.lc() != 2)
     {
         return false;
     }
     assert(color == 0 || color == 1);
-    int row = cell.row;
-    int col = cell.col;
-    CandSet candPair = cell.candidates;
-    if (row1 >= 0 && col1 >= 0)
+    //initialize/reset color at start
+    if (curr == nullptr)
     {
-        at(row1, col1).pairColor = color;
-        assert(at(row1, col1).lc() == 2);
+        for (Cell& c_ : *this) c_.pairColor = (c_ == cell) ? 0 : -1;
+        curr = &cell;
     }
-    for (int r = 0; r < 9; r++)
+    else
     {
-        for (int c = 0; c < 9; c++)
-        {
-            //initialize recursion
-            if (row1 == -1 && col1 == -1)
-            {
-                at(r, c).pairColor = (r == row && c == col) ? 0 : -1;
-                continue;
-            }
-            //update cand list if we have an intersecting color pair
-            if (r != row1 && c != col1 && at(r, c).pairColor == (~color & 1))
-            {
-                //assert(at(r, col1).pairColor == -1);
-                //assert(at(row1, c).pairColor == -1);
-                bool stepReducedCands = at(r, col1).candidates.remove(candPair) || at(row1, c).candidates.remove(candPair);
-                if (stepReducedCands)
-                {
-                    if (print_step) appendSolvStep(row, col, "Colored pair: Removed " + candPair.to_string() + " in (" + to_string(r) + ", " + to_string(col1) + ") or (" + to_string(row1) + ", " + to_string(c) + ")");
-                    return true;
-                }
-            }
-            //determine candPair by a Naked Pair that has only one candidate in common
-            if (r != row1 && c != col1 && at(r, c).pairColor == color)
-            {
-                for (int i = 0; i < 9; i++)
-                {
-                    if (i == row1 || i == r) continue;
-                    CandSet t0 = at(i, col1).candidates;
-                    CandSet t1 = at(i, c).candidates;
-                    CandSet t2 = candPair - t0;
-                    if (t0.size() != 2 || t0 != t1 || t2.size() != 1) continue;
-                    at(row1, col1).candidates = t2;
-                    at(r, c).candidates = t2;
-                    if (print_step) appendSolvStep(row1, col1, "Cand pair " + candPair.to_string() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str());
-                    if (print_step) appendSolvStep(r, c, "Cand pair " + candPair.to_string() + " set due to pair in " + at(i, col1).cord2str() + " and " + at(i, c).cord2str());
-                    return true;
-                }
-                for (int j = 0; j < 9; j++)
-                {
-                    if (j == col1 || j == c) continue;
-                    CandSet t0 = at(row1, j).candidates;
-                    CandSet t1 = at(r, j).candidates;
-                    CandSet t2 = candPair - t0;
-                    if (t0.size() != 2 || t0 != t1 || t2.size() != 1) continue;
-                    at(row1, col1).candidates = t2;
-                    at(r, c).candidates = t2;
-                    if (print_step) appendSolvStep(row1, col1, "Cand pair " + candPair.to_string() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str());
-                    if (print_step) appendSolvStep(r, c, "Cand pair " + candPair.to_string() + " set due to pair in " + at(row1, j).cord2str() + " and " + at(r, j).cord2str());
-                    return true;
-                }
-            }
-        }
+        curr->pairColor = color;
     }
     //start the recursive coloring process and build the color tree
-    Cell* currCell = &cell;
-    if (row1 != -1 && col1 != -1)
-    {
-        currCell = &at(row1, col1);
-    }
-    int nextColor = ~color & 1;
+    assert(curr->lc() == 2);
+    int nextColor    = ~color & 1;
+    CandSet candPair = cell.candidates;
     //check if open cells in block are in one line, i.e. in one row or in one column
     int numLeftCellsInBlk = 0;
     int relRow = -1;
     int relCol = -1;
     for (int bi = 0; bi < 9; bi++)
     {
-        if (bi == currCell->blkidx) continue;
-        if (atBlock(currCell->blk, bi).isGap())
+        if (bi == curr->blkidx) continue;
+        if (atBlock(curr->blk, bi).isGap())
         {
             numLeftCellsInBlk++;
             if (numLeftCellsInBlk == 1)
             {
-                relRow = atBlock(currCell->blk, bi).row;
-                relCol = atBlock(currCell->blk, bi).col;
+                relRow = atBlock(curr->blk, bi).row;
+                relCol = atBlock(curr->blk, bi).col;
             }
-            if (numLeftCellsInBlk > 1 && relRow != atBlock(currCell->blk, bi).row) relRow = -1;
-            if (numLeftCellsInBlk > 1 && relCol != atBlock(currCell->blk, bi).col) relCol = -1;
+            if (numLeftCellsInBlk > 1 && relRow != atBlock(curr->blk, bi).row) relRow = -1;
+            if (numLeftCellsInBlk > 1 && relCol != atBlock(curr->blk, bi).col) relCol = -1;
         }
     }
-    //recursive calls
-    for (int idx = 0; idx < 9; idx++)
+    for (Cell& nextC : *this)
     {
-        Cell* nextCell = &at(currCell->row, idx);
-        if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
+        //update cand list if we have an intersecting color pair
+        if (nextC.row != curr->row && nextC.col != curr->col && nextC.pairColor == (~color & 1))
         {
-            return checkForIntersectingColorPairs(cell, print_step, nextCell->row, nextCell->col, nextColor);
-        }
-        nextCell = &at(idx, currCell->col);
-        if (nextCell->pairColor == -1 && nextCell->candidates == candPair && nextCell->blk != currCell->blk)
-        {
-            return checkForIntersectingColorPairs(cell, print_step, nextCell->row, nextCell->col, nextColor);
-        }
-        nextCell = &atBlock(currCell->blk, idx);
-        if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
-        {
-            return checkForIntersectingColorPairs(cell, print_step, nextCell->row, nextCell->col, nextColor);
-        }
-        if (numLeftCellsInBlk > 1 && relCol > -1 && !(idx >= currCell->rowBlkPos && idx < currCell->rowBlkPos + 3))
-        {
-            nextCell = &at(idx, relCol);
-            if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
+            if (at(nextC.row, curr->col).candidates.remove(candPair) || at(curr->row, nextC.col).candidates.remove(candPair))
             {
-                return checkForIntersectingColorPairs(cell, print_step, nextCell->row, nextCell->col, color);
+                if (print_step) appendSolvStep(cell.row, cell.col, "Colored pair: Removed " + candPair.to_string() + " in (" + to_string(nextC.row) + ", " + to_string(curr->col) + ") or (" + to_string(curr->row) + ", " + to_string(nextC.col) + ")");
+                return true;
             }
         }
-        if (numLeftCellsInBlk > 1 && relRow > -1 && !(idx >= currCell->colBlkPos && idx < currCell->colBlkPos + 3))
+        //determine candPair by a Naked Pair that has only one candidate in common
+        if (nextC.row != curr->row && nextC.col != curr->col && nextC.pairColor == color)
         {
-            nextCell = &at(relRow, idx);
-            if (nextCell->pairColor == -1 && nextCell->candidates == candPair)
+            for (int i = 0; i < 9; i++)
             {
-                return checkForIntersectingColorPairs(cell, print_step, nextCell->row, nextCell->col, color);
+                if (i == curr->row || i == nextC.row) continue;
+                CandSet t0 = at(i, curr->col).candidates;
+                CandSet t1 = at(i, nextC.col).candidates;
+                if (t0.size() == 2 && t1.size() == 2 && t0 == t1 && (t0 && candPair).size() == 1)
+                {
+                    curr->candidates.remove(t0 && candPair);
+                    nextC.candidates.remove(t0 && candPair);
+                    if (print_step) appendSolvStep(curr->row, curr->col, "Colored pair " + candPair.to_string() + " could be reduced due to a constellation with another Naked pair sharing one common candidate");
+                    return true;
+                }
+            }
+            for (int j = 0; j < 9; j++)
+            {
+                if (j == curr->col || j == nextC.col) continue;
+                CandSet t0 = at(curr->row, j).candidates;
+                CandSet t1 = at(nextC.row, j).candidates;
+                if (t0.size() == 2 && t1.size() == 2 && t0 == t1 && (t0 && candPair).size() == 1)
+                {
+                    curr->candidates.remove(t0 && candPair);
+                    nextC.candidates.remove(t0 && candPair);
+                    if (print_step) appendSolvStep(curr->row, curr->col, "Colored pair " + candPair.to_string() + " could be reduced due to a constellation with another Naked pair sharing one common candidate");
+                    return true;
+                }
+            }
+        }
+        //recursive calls
+        if (nextC.row == curr->row && nextC.pairColor == -1 && nextC.candidates == candPair && nextC.blk != curr->blk)
+        {
+            return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
+        }
+        if (nextC.col == curr->col && nextC.pairColor == -1 && nextC.candidates == candPair && nextC.blk != curr->blk)
+        {
+            return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
+        }
+        if (nextC.blk == curr->blk && nextC.pairColor == -1 && nextC.candidates == candPair)
+        {
+            return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
+        }
+        if (numLeftCellsInBlk > 1 && relCol > -1 && nextC.col == relCol && !(nextC.row >= curr->rowBlkPos && nextC.row < curr->rowBlkPos + 3))
+        {
+            if (nextC.pairColor == -1 && nextC.candidates == candPair)
+            {
+                return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
+            }
+        }
+        if (numLeftCellsInBlk > 1 && relRow > -1 && nextC.row == relRow && !(nextC.col >= curr->colBlkPos && nextC.col < curr->colBlkPos + 3))
+        {
+            if (nextC.pairColor == -1 && nextC.candidates == candPair)
+            {
+                return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
             }
         }
     }
@@ -878,8 +856,8 @@ bool Solver::solve(Board& quiz, int numIterations)
     //forcing chain
     if (!bIsSolved)
     {
-        Board b1 = *this;
-        Board b2 = *this;
+        Board b1 = (Board&)*this;
+        Board b2 = (Board&)*this;
         for (Cell& cell : *this)
         {
             if (cell.lc() != 2)

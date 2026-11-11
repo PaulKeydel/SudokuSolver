@@ -87,6 +87,8 @@ struct Cell
     CandSet candidates;
     //methods
     Cell(): val(0), row(-1), col(-1), blk(-1), blkidx(-1), pairColor(-1) {};
+    bool operator==(Cell& op) { return (row == op.row) && (col == op.col); }
+    bool operator!=(Cell& op) { return (row != op.row) || (col != op.col); }
     Cell operator=(const Cell& other);
     /*!Set all class parameters (position and digit) based on the Z-ordered cell index.*/
     void init(int idx, int digit);
@@ -123,7 +125,7 @@ public:
     bool isValid();
     bool isSolved();
     void fillCands();
-    std::string getBoardText();
+    std::string to_text();
 };
 
 class Solver: public Board
@@ -151,7 +153,7 @@ public:
     bool checkCellForXWing(Cell& cell, bool print_step);
     bool checkCellForXYWing(Cell& cell, bool print_step);
     bool checkCellForLockedCandsInBlocks(Cell& cell, bool print_step);
-    bool checkForIntersectingColorPairs(Cell& cell, bool print_step, int row1 = -1, int col1 = -1, int color = 0);
+    bool checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* curr = nullptr, int color = 0);
     bool applyStrategies(Board& quiz, int numIterations, bool print_steps = true);
     bool solve(Board& quiz, int numIterations = INT_MAX);
 };
