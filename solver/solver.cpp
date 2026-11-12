@@ -708,15 +708,12 @@ bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* c
     //initialize/reset color at start
     if (curr == nullptr)
     {
-        for (Cell& c_ : *this) c_.pairColor = (c_ == cell) ? 0 : -1;
+        for (Cell& c_ : *this) c_.pairColor = -1;
         curr = &cell;
-    }
-    else
-    {
-        curr->pairColor = color;
     }
     //start the recursive coloring process and build the color tree
     assert(curr->lc() == 2);
+    curr->pairColor  = color;
     int nextColor    = ~color & 1;
     CandSet candPair = cell.candidates;
     //check if open cells in block are in one line, i.e. in one row or in one column
@@ -780,31 +777,29 @@ bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* c
             }
         }
         //recursive calls
-        if (nextC.row == curr->row && nextC.pairColor == -1 && nextC.candidates == candPair && nextC.blk != curr->blk)
+        if (nextC.pairColor != -1 || nextC.candidates != candPair)
+        {
+            continue;
+        }
+        if (nextC.row == curr->row && nextC.blk != curr->blk)
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
         }
-        if (nextC.col == curr->col && nextC.pairColor == -1 && nextC.candidates == candPair && nextC.blk != curr->blk)
+        if (nextC.col == curr->col && nextC.blk != curr->blk)
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
         }
-        if (nextC.blk == curr->blk && nextC.pairColor == -1 && nextC.candidates == candPair)
+        if (nextC.blk == curr->blk)
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
         }
-        if (numLeftCellsInBlk > 1 && relCol > -1 && nextC.col == relCol && !(nextC.row >= curr->rowBlkPos && nextC.row < curr->rowBlkPos + 3))
+        if (numLeftCellsInBlk > 1 && relCol > -1 && nextC.col == relCol && nextC.blk != curr->blk)
         {
-            if (nextC.pairColor == -1 && nextC.candidates == candPair)
-            {
-                return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
-            }
+            return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
         }
-        if (numLeftCellsInBlk > 1 && relRow > -1 && nextC.row == relRow && !(nextC.col >= curr->colBlkPos && nextC.col < curr->colBlkPos + 3))
+        if (numLeftCellsInBlk > 1 && relRow > -1 && nextC.row == relRow && nextC.blk != curr->blk)
         {
-            if (nextC.pairColor == -1 && nextC.candidates == candPair)
-            {
-                return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
-            }
+            return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
         }
     }
     return false;
