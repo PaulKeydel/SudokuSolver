@@ -284,6 +284,19 @@ string Solver::getStepsText()
 
 string Solver::getLatexCode()
 {
+    //add backslashes in Latex code
+    size_t n = 0;
+    while ((n = latexCode.find(" {", n)) != string::npos)
+    {
+        latexCode.replace(n, 2, " \\{");
+        n += 3;
+    }
+    n = 0;
+    while ((n = latexCode.find("} ", n)) != string::npos)
+    {
+        latexCode.replace(n, 2, "\\} ");
+        n += 3;
+    }
     return latexCode;
 }
 
@@ -568,7 +581,7 @@ bool Solver::checkCellForXWing(Cell& cell, bool print_step)
             singleCands = commonC - collectCands(cell, 'r', vector<int>{col, c}) - collectCands(at(r, col), 'r', vector<int>{col, c});
             if (singleCands.size() == 1)
             {
-                if (updateCands(singleCands, at(row, col), 'c', vector<int>{row, r}) || updateCands(singleCands, at(row, c), 'c', vector<int>{row, r}))
+                if (updateCands(singleCands, cell, 'c', vector<int>{row, r}) || updateCands(singleCands, at(row, c), 'c', vector<int>{row, r}))
                 {
                     if (print_step) appendSolvStep(row, col, "column-wise X-Wing with diag cell" + at(r, c).cord2str());
                     return true;
@@ -578,7 +591,7 @@ bool Solver::checkCellForXWing(Cell& cell, bool print_step)
             singleCands = commonC - collectCands(cell, 'c', vector<int>{row, r}) - collectCands(at(row, c), 'c', vector<int>{row, r});
             if (singleCands.size() == 1)
             {
-                if (updateCands(singleCands, at(row, col), 'r', vector<int>{col, c}) || updateCands(singleCands, at(r, col), 'r', vector<int>{col, c}))
+                if (updateCands(singleCands, cell, 'r', vector<int>{col, c}) || updateCands(singleCands, at(r, col), 'r', vector<int>{col, c}))
                 {
                     if (print_step) appendSolvStep(row, col, "row-wise X-Wing with diag cell" + at(r, c).cord2str());
                     return true;
@@ -738,7 +751,7 @@ bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* c
     for (Cell& nextC : *this)
     {
         //update cand list if we have an intersecting color pair
-        if (nextC.row != curr->row && nextC.col != curr->col && nextC.pairColor == (~color & 1))
+        if (nextC.row != curr->row && nextC.col != curr->col && nextC.pairColor == nextColor)
         {
             if (at(nextC.row, curr->col).candidates.remove(candPair) || at(curr->row, nextC.col).candidates.remove(candPair))
             {
@@ -793,11 +806,11 @@ bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* c
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, nextColor);
         }
-        if (numLeftCellsInBlk > 1 && relCol > -1 && nextC.col == relCol && nextC.blk != curr->blk)
+        if (numLeftCellsInBlk > 0 && relCol > -1 && nextC.col == relCol && nextC.blk != curr->blk)
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
         }
-        if (numLeftCellsInBlk > 1 && relRow > -1 && nextC.row == relRow && nextC.blk != curr->blk)
+        if (numLeftCellsInBlk > 0 && relRow > -1 && nextC.row == relRow && nextC.blk != curr->blk)
         {
             return checkForIntersectingColorPairs(cell, print_step, &nextC, color);
         }
@@ -859,11 +872,10 @@ bool Solver::solve(Board& quiz, int numIterations)
             {
                 continue;
             }
-            CandSet candPair = cell.candidates;
-            const int rmCand1 = candPair.getCand(0);
-            const int rmCand2 = candPair.getCand(1);
-            b1[9 * cell.row + cell.col].val = rmCand1;
-            b2[9 * cell.row + cell.col].val = rmCand2;
+            const int rmCand1 = cell.candidates.getCand(0);
+            const int rmCand2 = cell.candidates.getCand(1);
+            b1.at(cell.row, cell.col).val = rmCand1;
+            b2.at(cell.row, cell.col).val = rmCand2;
             //check both options
             bool bSolved1 = applyStrategies(b1, numIterations, false);
             bool bValid1 = isValid();
@@ -883,25 +895,10 @@ bool Solver::solve(Board& quiz, int numIterations)
             else
             {
                 //restore old state
-                b1[9 * cell.row + cell.col].val = 0;
-                b2[9 * cell.row + cell.col].val = 0;
-                b1[9 * cell.row + cell.col].candidates = candPair;
-                b2[9 * cell.row + cell.col].candidates = candPair;
+                b1.at(cell.row, cell.col).val = 0;
+                b2.at(cell.row, cell.col).val = 0;
             }
         }
-    }
-    //add backslashes in Latex code
-    size_t n = 0;
-    while ((n = latexCode.find(" {", n)) != string::npos)
-    {
-        latexCode.replace(n, 2, " \\{");
-        n += 3;
-    }
-    n = 0;
-    while ((n = latexCode.find("} ", n)) != string::npos)
-    {
-        latexCode.replace(n, 2, "\\} ");
-        n += 3;
     }
     return bIsSolved;
 }
