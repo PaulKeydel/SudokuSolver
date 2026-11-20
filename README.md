@@ -1,13 +1,12 @@
 # SudokuSolver
 This C++ program can solve Sudokus by applying human strategies. A simple text-based user interface is provided in order to easily enter the quiz. It's also possible to read a quiz from file. A few test boards are in this repo. The solution path with all steps will be summarized in a pdf file. This requires Latex to be installed.
 
-**How does the solving algorithm work?** First, the program passes through all empty cells and collects all possible candidates for each cell. Depending on how many entries are given in the same row, column or block, an empty cell can have one or more possible candidates. Based on logical rules and dependencies between cells, the algortihm then tries to eliminate candidates until only one number is left in the set. This, however, can not always be guaranteed. Sudokus can become very complex and because strategic solving needs to include many constellations and subcases, the candidate reduction is not always sucessful. Even if this implementation says the quiz is not solvable, you might have the chance to find a solution with pen and paper. So far, this implementation focuses on 10 logical strategies.
+**How does the solving algorithm work?** First, the program passes through all empty cells and collects all possible candidates for each cell. Depending on how many entries are given in the same row, column or block, an empty cell can have one or more possible candidates. Based on logical rules and dependencies between cells, the algortihm then tries to eliminate candidates until only one number is left in the set. This, however, can not always be guaranteed. Sudokus can become very complex and because strategic solving needs to include many constellations and subcases, the candidate reduction is not always sucessful. Even if this implementation says the quiz is not solvable, you might have the chance to find a solution with pen and paper. So far, this implementation focuses on 11 logical strategies.
 
 * Hidden singles
 * Naked singles
-* Hidden pairs
-* Naked pairs
-* Naked triplets
+* Hidden tuples (pairs and triplets)
+* Naked tuples (pairs and triplets)
 * Locked candidates
 * X-wings
 * XY-wings

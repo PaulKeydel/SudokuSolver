@@ -413,104 +413,9 @@ bool Solver::checkCellForHiddenSingle(Cell& cell, bool print_step)
     return false;
 }
 
-bool Solver::checkCellForNakedPair(Cell& cell, bool print_step)
+bool Solver::checkCellForNakedTuple(Cell& cell, bool print_step)
 {
-    if (cell.lc() != 2)
-    {
-        return false;
-    }
-    CandSet candPair = cell.candidates;
-    for (int idx = 0; idx < 9; idx++)
-    {
-        //if cell(row, col) can basically be a naked pair, look for the other part in same row
-        Cell* cell1 = &at(cell.row, idx);
-        if (cell1->col != cell.col && cell1->candidates == candPair)
-        {
-            if (updateCands(candPair, cell, 'r', vector<int>{cell.col, cell1->col}))
-            {
-                if (print_step) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-        //if cell(row, col) can basically be a naked pair, look for the other part in same col
-        cell1 = &at(idx, cell.col);
-        if (cell1->row != cell.row && cell1->candidates == candPair)
-        {
-            if (updateCands(candPair, cell, 'c', vector<int>{cell.row, cell1->row}))
-            {
-                if (print_step) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-        //if cell(row, col) can basically be a naked pair, look for the other part in same block
-        cell1 = &atBlock(cell.blk, idx);
-        if (cell1->blkidx != cell.blkidx && cell1->candidates == candPair)
-        {
-            if (updateCands(candPair, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx}))
-            {
-                if (print_step) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool Solver::checkCellForHiddenPair(Cell& cell, bool print_step)
-{
-    if (cell.lc() < 3)
-    {
-        return false;
-    }
-    CandSet uniqueC;
-    for (int idx = 0; idx < 9; idx++)
-    {
-        //search for a pair along row
-        Cell* cell1 = &at(cell.row, idx);
-        if (cell1->col != cell.col && cell1->isGap())
-        {
-            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'r', vector<int>{cell.col, cell1->col});
-            if (uniqueC.size() == 2)
-            {
-                cell.candidates = uniqueC;
-                cell1->candidates = uniqueC;
-                if (print_step) appendSolvStep(cell.row, cell.col, "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-        //search for a pair along col
-        cell1 = &at(idx, cell.col);
-        if (cell1->row != cell.row && cell1->isGap())
-        {
-            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'c', vector<int>{cell.row, cell1->row});
-            if (uniqueC.size() == 2)
-            {
-                cell.candidates = uniqueC;
-                cell1->candidates = uniqueC;
-                if (print_step) appendSolvStep(cell.row, cell.col, "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-        //search the pair within block
-        cell1 = &atBlock(cell.blk, idx);
-        if (cell1->blkidx != cell.blkidx && cell1->isGap())
-        {
-            uniqueC = (cell.candidates && cell1->candidates) - collectCands(cell, 'b', vector<int>{cell.blkidx, cell1->blkidx});
-            if (uniqueC.size() == 2)
-            {
-                cell.candidates = uniqueC;
-                cell1->candidates = uniqueC;
-                if (print_step) appendSolvStep(cell.row, cell.col, "Hidden Pair " + cell.cand2str() + " with cell " + cell1->cord2str());
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool Solver::checkCellForNakedTriplet(Cell& cell, bool print_step)
-{
-    if (cell.lc() != 2 && cell.lc() != 3)
+    if (cell.lc() < 2)
     {
         return false;
     }
@@ -518,39 +423,111 @@ bool Solver::checkCellForNakedTriplet(Cell& cell, bool print_step)
     {
         for (int idx1 = 0; idx1 < 9; idx1++)
         {
-            //if cell(row, col) can basically be a naked triple, look for the other part in same row
+            int tupleLen = (idx0 == idx1) ? 2 : 3;
+            //look for a possible tuple in same row, including current cell
             Cell* cell1 = &at(cell.row, idx0);
             Cell* cell2 = &at(cell.row, idx1);
-            if (idx0 != idx1 && cell1->col != cell.col && cell2->col != cell.col && cell1->lc() > 1 && cell2->lc() > 1)
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->col != cell.col && cell2->col != cell.col)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == 3 && updateCands(u, cell, 'r', vector<int>{cell.col, cell1->col, cell2->col}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'r', vector<int>{cell.col, cell1->col, cell2->col}))
                 {
-                    if (print_step) appendSolvStep(cell.row, cell.col, "Naked Triplet in row with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in row with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
                     return true;
                 }
             }
-            //if cell(row, col) can basically be a naked triple, look for the other part in same col
+            //look for a possible tuple in same colunm, including current cell
             cell1 = &at(idx0, cell.col);
             cell2 = &at(idx1, cell.col);
-            if (idx0 != idx1 && cell1->row != cell.row && cell2->row != cell.row && cell1->lc() > 1 && cell2->lc() > 1)
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->row != cell.row && cell2->row != cell.row)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == 3 && updateCands(u, cell, 'c', vector<int>{cell.row, cell1->row, cell2->row}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'c', vector<int>{cell.row, cell1->row, cell2->row}))
                 {
-                    if (print_step) appendSolvStep(cell.row, cell.col, "Naked Triplet in col with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in col with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
                     return true;
                 }
             }
-            //if cell(row, col) can basically be a naked triple, look for the other part in same block
+            //look for a possible tuple in same in same block, including current cell
             cell1 = &atBlock(cell.blk, idx0);
             cell2 = &atBlock(cell.blk, idx1);
-            if (idx0 != idx1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx && cell1->lc() > 1 && cell2->lc() > 1)
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == 3 && updateCands(u, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx}))
                 {
-                    if (print_step) appendSolvStep(cell.row, cell.col, "Naked Triplet in block with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in block with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool Solver::checkCellForHiddenTuple(Cell& cell, bool print_step)
+{
+    if (cell.lc() < 2)
+    {
+        return false;
+    }
+    CandSet uniqueC, allOtherC;
+    for (int idx0 = 0; idx0 < 9; idx0++)
+    {
+        for (int idx1 = 0; idx1 < 9; idx1++)
+        {
+            int tupleLen = (idx0 == idx1) ? 2 : 3;
+            //search for a tuple along row
+            Cell* cell1 = &at(cell.row, idx0);
+            Cell* cell2 = &at(cell.row, idx1);
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->col != cell.col && cell2->col != cell.col)
+            {
+                allOtherC = collectCands(cell, 'r', vector<int>{cell.col, cell1->col, cell2->col});
+                uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
+                if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
+                {
+                    cell.candidates.remove(allOtherC);
+                    cell1->candidates.remove(allOtherC);
+                    cell2->candidates.remove(allOtherC);
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Hidden Pair [" + uniqueC.to_string() + "] with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Hidden Triplet [" + uniqueC.to_string() + "] with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    return true;
+                }
+            }
+            //search for a tuple along col
+            cell1 = &at(idx0, cell.col);
+            cell2 = &at(idx1, cell.col);
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->row != cell.row && cell2->row != cell.row)
+            {
+                allOtherC = collectCands(cell, 'c', vector<int>{cell.row, cell1->row, cell2->row});
+                uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
+                if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
+                {
+                    cell.candidates.remove(allOtherC);
+                    cell1->candidates.remove(allOtherC);
+                    cell2->candidates.remove(allOtherC);
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Hidden Pair [" + uniqueC.to_string() + "] with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Hidden Triplet [" + uniqueC.to_string() + "] with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
+                    return true;
+                }
+            }
+            //search tuple within block
+            cell1 = &atBlock(cell.blk, idx0);
+            cell2 = &atBlock(cell.blk, idx1);
+            if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx)
+            {
+                allOtherC = collectCands(cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx});
+                uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
+                if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
+                {
+                    cell.candidates.remove(allOtherC);
+                    cell1->candidates.remove(allOtherC);
+                    cell2->candidates.remove(allOtherC);
+                    if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Hidden Pair [" + uniqueC.to_string() + "] with cell " + cell1->cord2str());
+                    if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Hidden Triplet [" + uniqueC.to_string() + "] with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
                     return true;
                 }
             }
@@ -839,10 +816,9 @@ bool Solver::applyStrategies(Board& quiz, int numIterations, bool print_steps)
             bool tryNext = true;
             if (tryNext) tryNext = !checkCellForNakedSingle(cell, print_steps);
             if (tryNext) tryNext = !checkCellForHiddenSingle(cell, print_steps);
-            if (tryNext) tryNext = !checkCellForNakedPair(cell, print_steps);
-            if (tryNext) tryNext = !checkCellForHiddenPair(cell, print_steps);
+            if (tryNext) tryNext = !checkCellForNakedTuple(cell, print_steps);
+            if (tryNext) tryNext = !checkCellForHiddenTuple(cell, print_steps);
             if (tryNext) tryNext = !checkCellForLockedCandsInBlocks(cell, print_steps);
-            if (tryNext) tryNext = !checkCellForNakedTriplet(cell, print_steps);
             if (tryNext) tryNext = !checkCellForXWing(cell, print_steps);
             if (tryNext) tryNext = !checkCellForXYWing(cell, print_steps);
             if (tryNext) checkForIntersectingColorPairs(cell, print_steps);

@@ -147,9 +147,8 @@ public:
     //solving techniques
     bool checkCellForNakedSingle(Cell& cell, bool print_step);
     bool checkCellForHiddenSingle(Cell& cell, bool print_step);
-    bool checkCellForNakedPair(Cell& cell, bool print_step);
-    bool checkCellForHiddenPair(Cell& cell, bool print_step);
-    bool checkCellForNakedTriplet(Cell& cell, bool print_step);
+    bool checkCellForNakedTuple(Cell& cell, bool print_step);
+    bool checkCellForHiddenTuple(Cell& cell, bool print_step);
     bool checkCellForXWing(Cell& cell, bool print_step);
     bool checkCellForXYWing(Cell& cell, bool print_step);
     bool checkCellForLockedCandsInBlocks(Cell& cell, bool print_step);
