@@ -300,7 +300,7 @@ string Solver::getLatexCode()
     return latexCode;
 }
 
-CandSet Solver::collectCands(Cell& cell, const char mode_r_c_b, vector<int> exclude)
+CandSet Solver::collectCands(Cell& cell, const char selectMode, vector<int> exclude)
 {
     CandSet _union;
     for (int i = 0; i < 9; i++)
@@ -309,15 +309,17 @@ CandSet Solver::collectCands(Cell& cell, const char mode_r_c_b, vector<int> excl
         {
             continue;
         }
-        if (mode_r_c_b == 'r')
+        if (tolower(selectMode) == 'r')
         {
+            if (selectMode == 'r' && (i < cell.colBlkPos || i >= cell.colBlkPos + 3)) continue;
             _union = _union + at(cell.row, i).candidates;
         }
-        else if (mode_r_c_b == 'c')
+        else if (tolower(selectMode) == 'c')
         {
+            if (selectMode == 'c' && (i < cell.rowBlkPos || i >= cell.rowBlkPos + 3)) continue;
             _union = _union + at(i, cell.col).candidates;
         }
-        else if (mode_r_c_b == 'b')
+        else if (selectMode == 'B')
         {
             _union = _union + atBlock(cell.blk, i).candidates;
         }
@@ -325,7 +327,7 @@ CandSet Solver::collectCands(Cell& cell, const char mode_r_c_b, vector<int> excl
     return _union;
 }
 
-bool Solver::updateCands(CandSet digits, Cell& cell, const char mode_r_c_b, vector<int> exclude)
+bool Solver::updateCands(CandSet digits, Cell& cell, const char selectMode, vector<int> exclude)
 {
     bool couldReduce = false;
     for (int idx = 0; idx < 9; idx++)
@@ -334,15 +336,17 @@ bool Solver::updateCands(CandSet digits, Cell& cell, const char mode_r_c_b, vect
         {
             continue;
         }
-        if (mode_r_c_b == 'r')
+        if (tolower(selectMode) == 'r')
         {
+            if (selectMode == 'r' && (idx < cell.colBlkPos || idx >= cell.colBlkPos + 3)) continue;
             couldReduce |= at(cell.row, idx).candidates.remove(digits);
         }
-        else if (mode_r_c_b == 'c')
+        else if (tolower(selectMode) == 'c')
         {
+            if (selectMode == 'c' && (idx < cell.rowBlkPos || idx >= cell.rowBlkPos + 3)) continue;
             couldReduce |= at(idx, cell.col).candidates.remove(digits);
         }
-        else if (mode_r_c_b == 'b')
+        else if (selectMode == 'B')
         {
             couldReduce |= atBlock(cell.blk, idx).candidates.remove(digits);
         }
@@ -357,9 +361,9 @@ void Solver::setFinalValue(Cell& cell)
     int newDigit = cell.candidates.getCand(0);
     assert(newDigit > 0 && newDigit < 10);
     //update cand list in same row, in same col and block
-    updateCands(cell.candidates, cell, 'r', vector<int>{cell.col});
-    updateCands(cell.candidates, cell, 'c', vector<int>{cell.row});
-    updateCands(cell.candidates, cell, 'b', vector<int>{cell.blkidx});
+    updateCands(cell.candidates, cell, 'R', vector<int>{cell.col});
+    updateCands(cell.candidates, cell, 'C', vector<int>{cell.row});
+    updateCands(cell.candidates, cell, 'B', vector<int>{cell.blkidx});
     //set digit and delete candidate
     cell.val = newDigit;
     cell.candidates.erase(newDigit);
@@ -384,7 +388,7 @@ bool Solver::checkCellForHiddenSingle(Cell& cell, bool print_step)
     }
     CandSet uniqueC;
     //search along row and collect all other candidates
-    uniqueC = cell.candidates - collectCands(cell, 'r', vector<int>{cell.col});
+    uniqueC = cell.candidates - collectCands(cell, 'R', vector<int>{cell.col});
     if (uniqueC.size() == 1)
     {
         cell.candidates = uniqueC;
@@ -393,7 +397,7 @@ bool Solver::checkCellForHiddenSingle(Cell& cell, bool print_step)
         return true;
     }
     //search along col and collect all other candidates
-    uniqueC = cell.candidates - collectCands(cell, 'c', vector<int>{cell.row});
+    uniqueC = cell.candidates - collectCands(cell, 'C', vector<int>{cell.row});
     if (uniqueC.size() == 1)
     {
         cell.candidates = uniqueC;
@@ -402,7 +406,7 @@ bool Solver::checkCellForHiddenSingle(Cell& cell, bool print_step)
         return true;
     }
     //search within block and collect all other candidates
-    uniqueC = cell.candidates - collectCands(cell, 'b', vector<int>{cell.blkidx});
+    uniqueC = cell.candidates - collectCands(cell, 'B', vector<int>{cell.blkidx});
     if (uniqueC.size() == 1)
     {
         cell.candidates = uniqueC;
@@ -430,7 +434,7 @@ bool Solver::checkCellForNakedTuple(Cell& cell, bool print_step)
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->col != cell.col && cell2->col != cell.col)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == tupleLen && updateCands(u, cell, 'r', vector<int>{cell.col, cell1->col, cell2->col}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'R', vector<int>{cell.col, cell1->col, cell2->col}))
                 {
                     if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
                     if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in row with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
@@ -443,7 +447,7 @@ bool Solver::checkCellForNakedTuple(Cell& cell, bool print_step)
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->row != cell.row && cell2->row != cell.row)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == tupleLen && updateCands(u, cell, 'c', vector<int>{cell.row, cell1->row, cell2->row}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'C', vector<int>{cell.row, cell1->row, cell2->row}))
                 {
                     if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
                     if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in col with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
@@ -456,7 +460,7 @@ bool Solver::checkCellForNakedTuple(Cell& cell, bool print_step)
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx)
             {
                 CandSet u = cell.candidates + cell1->candidates + cell2->candidates;
-                if (u.size() == tupleLen && updateCands(u, cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx}))
+                if (u.size() == tupleLen && updateCands(u, cell, 'B', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx}))
                 {
                     if (print_step && tupleLen == 2) appendSolvStep(cell.row, cell.col, "Naked Pair with cell " + cell1->cord2str());
                     if (print_step && tupleLen == 3) appendSolvStep(cell.row, cell.col, "Naked Triplet in block with cell " + cell1->cord2str() + " and cell " + cell2->cord2str());
@@ -485,7 +489,7 @@ bool Solver::checkCellForHiddenTuple(Cell& cell, bool print_step)
             Cell* cell2 = &at(cell.row, idx1);
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->col != cell.col && cell2->col != cell.col)
             {
-                allOtherC = collectCands(cell, 'r', vector<int>{cell.col, cell1->col, cell2->col});
+                allOtherC = collectCands(cell, 'R', vector<int>{cell.col, cell1->col, cell2->col});
                 uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
                 if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
                 {
@@ -502,7 +506,7 @@ bool Solver::checkCellForHiddenTuple(Cell& cell, bool print_step)
             cell2 = &at(idx1, cell.col);
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->row != cell.row && cell2->row != cell.row)
             {
-                allOtherC = collectCands(cell, 'c', vector<int>{cell.row, cell1->row, cell2->row});
+                allOtherC = collectCands(cell, 'C', vector<int>{cell.row, cell1->row, cell2->row});
                 uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
                 if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
                 {
@@ -519,7 +523,7 @@ bool Solver::checkCellForHiddenTuple(Cell& cell, bool print_step)
             cell2 = &atBlock(cell.blk, idx1);
             if (cell1->lc() > 1 && cell2->lc() > 1 && cell1->blkidx != cell.blkidx && cell2->blkidx != cell.blkidx)
             {
-                allOtherC = collectCands(cell, 'b', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx});
+                allOtherC = collectCands(cell, 'B', vector<int>{cell.blkidx, cell1->blkidx, cell2->blkidx});
                 uniqueC = (cell.candidates + cell1->candidates + cell2->candidates) - allOtherC;
                 if (uniqueC.size() == tupleLen && (cell.candidates + cell1->candidates + cell2->candidates).size() > tupleLen)
                 {
@@ -555,20 +559,21 @@ bool Solver::checkCellForXWing(Cell& cell, bool print_step)
             }
             commonC = cell.candidates && at(row, c).candidates && at(r, col).candidates && at(r, c).candidates;
             //check conditions for x-wing column-wise
-            singleCands = commonC - collectCands(cell, 'r', vector<int>{col, c}) - collectCands(at(r, col), 'r', vector<int>{col, c});
+            singleCands = commonC - collectCands(cell, 'R', vector<int>{col, c}) - collectCands(at(r, col), 'R', vector<int>{col, c});
             if (singleCands.size() == 1)
             {
-                if (updateCands(singleCands, cell, 'c', vector<int>{row, r}) || updateCands(singleCands, at(row, c), 'c', vector<int>{row, r}))
+                //note: For && and || C++ does Short-circuit evaluation.
+                if (updateCands(singleCands, cell, 'C', vector<int>{row, r}) | updateCands(singleCands, at(row, c), 'C', vector<int>{row, r}))
                 {
                     if (print_step) appendSolvStep(row, col, "column-wise X-Wing with diag cell" + at(r, c).cord2str());
                     return true;
                 }
             }
             //check conditions for x-wing row-wise
-            singleCands = commonC - collectCands(cell, 'c', vector<int>{row, r}) - collectCands(at(row, c), 'c', vector<int>{row, r});
+            singleCands = commonC - collectCands(cell, 'C', vector<int>{row, r}) - collectCands(at(row, c), 'C', vector<int>{row, r});
             if (singleCands.size() == 1)
             {
-                if (updateCands(singleCands, cell, 'r', vector<int>{col, c}) || updateCands(singleCands, at(r, col), 'r', vector<int>{col, c}))
+                if (updateCands(singleCands, cell, 'R', vector<int>{col, c}) | updateCands(singleCands, at(r, col), 'R', vector<int>{col, c}))
                 {
                     if (print_step) appendSolvStep(row, col, "row-wise X-Wing with diag cell" + at(r, c).cord2str());
                     return true;
@@ -608,12 +613,8 @@ bool Solver::checkCellForXYWing(Cell& cell, bool print_step)
             yz = &atBlock(cell.blk, idx1);
             if (yz->row != row && xz->blk != yz->blk && xz->lc() == 2 && yz->lc() == 2 && (cell.candidates + xz->candidates + yz->candidates).size() == 3 && (cell.candidates && xz->candidates && yz->candidates).size() == 0)
             {
-                int r1 = yz->row;
                 CandSet rem = xz->candidates && yz->candidates;
-                int c1 = xz->colBlkPos;
-                bool reducedCands = at(r1, c1).candidates.remove(rem) || at(r1, c1 + 1).candidates.remove(rem) || at(r1, c1 + 2).candidates.remove(rem);
-                c1 = cell.colBlkPos;
-                reducedCands |= at(row, c1).candidates.remove(rem) || at(row, c1 + 1).candidates.remove(rem) || at(row, c1 + 2).candidates.remove(rem);
+                bool reducedCands = updateCands(rem, at(yz->row, xz->col), 'r') | updateCands(rem, cell, 'r');
                 if (reducedCands)
                 {
                     if (print_step) appendSolvStep(row, col, "XY wing in block-row scenario");
@@ -625,12 +626,8 @@ bool Solver::checkCellForXYWing(Cell& cell, bool print_step)
             yz = &atBlock(cell.blk, idx1);
             if (yz->col != col && xz->blk != yz->blk && xz->lc() == 2 && yz->lc() == 2 && (cell.candidates + xz->candidates + yz->candidates).size() == 3 && (cell.candidates && xz->candidates && yz->candidates).size() == 0)
             {
-                int c1 = yz->col;
                 CandSet rem = xz->candidates && yz->candidates;
-                int r1 = xz->rowBlkPos;
-                bool reducedCands = at(r1, c1).candidates.remove(rem) || at(r1 + 1, c1).candidates.remove(rem) || at(r1 + 2, c1).candidates.remove(rem);
-                r1 = cell.rowBlkPos;
-                reducedCands |= at(r1, col).candidates.remove(rem) || at(r1 + 1, col).candidates.remove(rem) || at(r1 + 2, col).candidates.remove(rem);
+                bool reducedCands = updateCands(rem, at(xz->row, yz->col), 'c') | updateCands(rem, cell, 'c');
                 if (reducedCands)
                 {
                     if (print_step) appendSolvStep(row, col, "XY wing in block-column scenario");
@@ -655,32 +652,32 @@ bool Solver::checkCellForLockedCandsInBlocks(Cell& cell, bool print_step)
     CandSet lockedCands;
     //check row-within-block scenario
     vector<int> sameRow = {at(row, colstart).blkidx, at(row, colstart + 1).blkidx, at(row, colstart + 2).blkidx};
-    lockedCands = cell.candidates - collectCands(cell, 'b', sameRow);
-    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'r', vector<int>{colstart, colstart + 1, colstart + 2}))
+    lockedCands = cell.candidates - collectCands(cell, 'B', sameRow);
+    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'R', vector<int>{colstart, colstart + 1, colstart + 2}))
     {
         if (print_step) appendSolvStep(row, col, "Cands [" + lockedCands.to_string() + "] are locked in row");
         return true;
     }
     //check col-within-block scenario
     vector<int> sameCol = {at(rowstart, col).blkidx, at(rowstart + 1, col).blkidx, at(rowstart + 2, col).blkidx};
-    lockedCands = cell.candidates - collectCands(cell, 'b', sameCol);
-    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'c', vector<int>{rowstart, rowstart + 1, rowstart + 2}))
+    lockedCands = cell.candidates - collectCands(cell, 'B', sameCol);
+    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'C', vector<int>{rowstart, rowstart + 1, rowstart + 2}))
     {
         if (print_step) appendSolvStep(row, col, "Cands [" + lockedCands.to_string() + "] are locked in col");
         return true;
     }
     //check block-within-row scenario
-    lockedCands = cell.candidates - collectCands(cell, 'r', vector<int>{colstart, colstart + 1, colstart + 2});
+    lockedCands = cell.candidates - collectCands(cell, 'R', vector<int>{colstart, colstart + 1, colstart + 2});
     vector<int> exclBlkRow = {at(cell.row, cell.colBlkPos).blkidx, at(cell.row, cell.colBlkPos + 1).blkidx, at(cell.row, cell.colBlkPos + 2).blkidx};
-    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'b', exclBlkRow))
+    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'B', exclBlkRow))
     {
         if (print_step) appendSolvStep(row, col, "Cands [" + lockedCands.to_string() + "] are locked in block-row");
         return true;
     }
     //check block-within-colunm scenario
-    lockedCands = cell.candidates - collectCands(cell, 'c', vector<int>{rowstart, rowstart + 1, rowstart + 2});
+    lockedCands = cell.candidates - collectCands(cell, 'C', vector<int>{rowstart, rowstart + 1, rowstart + 2});
     vector<int> exclBlkCol = {at(cell.rowBlkPos, cell.col).blkidx, at(cell.rowBlkPos + 1, cell.col).blkidx, at(cell.rowBlkPos + 2, cell.col).blkidx};
-    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'b', exclBlkCol))
+    if (lockedCands.size() > 0 && updateCands(lockedCands, cell, 'B', exclBlkCol))
     {
         if (print_step) appendSolvStep(row, col, "Cands [" + lockedCands.to_string() + "] are locked in block-column");
         return true;
@@ -730,7 +727,7 @@ bool Solver::checkForIntersectingColorPairs(Cell& cell, bool print_step, Cell* c
         //update cand list if we have an intersecting color pair
         if (nextC.row != curr->row && nextC.col != curr->col && nextC.pairColor == nextColor)
         {
-            if (at(nextC.row, curr->col).candidates.remove(candPair) || at(curr->row, nextC.col).candidates.remove(candPair))
+            if (at(nextC.row, curr->col).candidates.remove(candPair) | at(curr->row, nextC.col).candidates.remove(candPair))
             {
                 if (print_step) appendSolvStep(cell.row, cell.col, "Colored pair: Removed " + candPair.to_string() + " in (" + to_string(nextC.row) + ", " + to_string(curr->col) + ") or (" + to_string(curr->row) + ", " + to_string(nextC.col) + ")");
                 return true;
@@ -875,6 +872,7 @@ bool Solver::solve(Board& quiz, int numIterations)
                 b2.at(cell.row, cell.col).val = 0;
             }
         }
+        (Board&)*this = b1;
     }
     return bIsSolved;
 }

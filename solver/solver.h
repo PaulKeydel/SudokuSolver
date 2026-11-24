@@ -141,8 +141,8 @@ public:
     std::string getStepsText();
     std::string getLatexCode();
     //methods for operating on candidate lists
-    CandSet collectCands(Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
-    bool updateCands(CandSet digits, Cell& cell, const char mode_r_c_b, std::vector<int> exclude = std::vector<int>{});
+    CandSet collectCands(Cell& cell, const char selectMode, std::vector<int> exclude = std::vector<int>{});
+    bool updateCands(CandSet digits, Cell& cell, const char selectMode, std::vector<int> exclude = std::vector<int>{});
     void setFinalValue(Cell& cell);
     //solving techniques
     bool checkCellForNakedSingle(Cell& cell, bool print_step);
